@@ -2,11 +2,7 @@ import java.util.List;
 
 public class Node {
 
-    private List<Broker> brokers;
-
-    public Node(List<Broker> brokers){
-        this.brokers = brokers;
-    }
+    private static final List<Broker> brokers = null;
 
     public void init(int i){
 
