@@ -1,4 +1,4 @@
-public class Consumer {
+public class Consumer extends Node{
 
     public void register(Broker broker, String ){
 
