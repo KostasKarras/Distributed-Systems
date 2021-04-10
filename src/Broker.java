@@ -2,8 +2,8 @@ import java.util.List;
 
 public class Broker extends Node{
 
-    private static final List<Consumer> registerUsers;
-    private static final List<Publisher> registerPublishers;
+    private static final List<Consumer> registerUsers = null;
+    private static final List<Publisher> registerPublishers = null;
 
     public void calculateKeys(){
 
