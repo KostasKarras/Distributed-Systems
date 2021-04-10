@@ -1,13 +1,9 @@
 import java.util.ArrayList;
 import java.util.List;
 
-public class Publisher {
+public class Publisher extends Node{
 
-    private ChannelName channelName;
-
-    public Publisher(ChannelName channelName){
-        this.channelName = channelName;
-    }
+    private static final ChannelName channelName = null;
 
     public void addHashTag(String hashtag){
 
