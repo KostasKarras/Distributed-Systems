@@ -1,27 +1,17 @@
 import java.util.List;
 
-public class Node {
+interface Node {
 
-    private static final List<Broker> brokers = null;
+    static final List<Broker> brokers = null;
 
-    public void init(int i){
+    public void init(int i);
 
-    }
+    public List<Broker> getBrokers();
 
-    public List<Broker> getBrokers(){
+    public void connect();
 
-    }
+    public void disconnect();
 
-    public void connect(){
+    public void updateNodes();
 
-    }
-
-    public void disconnect(){
-
-    }
-
-
-    public void updateNodes(){
-
-    }
 }
