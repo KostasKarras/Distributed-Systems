@@ -64,8 +64,6 @@ public class Publisher extends Node {
     public static void main(String[] args) {
         Publisher p = new Publisher();
         ArrayList<byte[]> inputArraylist = p.generateChunks();
-        for(byte[] ar : inputArraylist)
-            System.out.println(ar);
         try {
             File nf = new File("C:/Users/Kostas/Desktop/test.mp4");
             for (byte[] ar : inputArraylist) {
