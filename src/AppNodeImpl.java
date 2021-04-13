@@ -5,22 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class AppNodeImpl implements Publisher, Consumer{
-    
-    @Override
-    public void register(Broker broker) {
-
-    }
-
-    @Override
-    public void disconnect(Broker broker) {
-
-    }
-
-    @Override
-    public void playData(Value video) {
-
-    }
-
     @Override
     public void addHashTag(String hashtag) {
 
@@ -57,18 +41,14 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
     @Override
-    public ArrayList<Value> generateChunks(String chunk) {
+    public ArrayList<byte[]> generateChunks(String filepath) {
         ArrayList<byte[]> my_arraylist = new ArrayList<byte []>();
 
-        //to epomeno arraylist kai byte array einai mono gia thn arxikopoihsh tou VideoFile
-        ArrayList<String> empty = null;
-        byte[] arr = null;
-        VideoFile vf = new VideoFile("", "", "", "", "", "",
-                "", empty, arr);
+        VideoFile vf = new VideoFile(filepath);
 
         boolean flag = true;
         int i = 0;
-        byte[] inputBuffer = vf.getVideoFileChunk("C:\\Users\\Kostas\\IdeaProjects\\Distributed Systems\\src\\DIMAKHS.mp4");
+        byte[] inputBuffer = vf.getVideoFileChunk();
 
         while (i < inputBuffer.length) {
             byte[] buffer = new byte[4096];
@@ -108,7 +88,8 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     public static void main(String[] args) {
         Publisher p = new AppNodeImpl();
-        ArrayList<byte[]> inputArraylist = p.generateChunks();
+        //generateChunks argument is the filepath
+        ArrayList<byte[]> inputArraylist = p.generateChunks("C:\\Users\\Kostas\\IdeaProjects\\Distributed Systems\\src\\DIMAKHS.mp4");
         try {
             File nf = new File("C:/Users/Kostas/Desktop/test.mp4");
             for (byte[] ar : inputArraylist) {
@@ -122,5 +103,20 @@ public class AppNodeImpl implements Publisher, Consumer{
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void register(Broker broker, String str) {
+
+    }
+
+    @Override
+    public void disconnect(Broker broker, String str) {
+
+    }
+
+    @Override
+    public void playData(String str, Value video) {
+
     }
 }
