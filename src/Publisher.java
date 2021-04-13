@@ -18,5 +18,5 @@ interface Publisher extends Node{
 
     public void notifyBrokersForHashTags(String hashtag);
 
-    public ArrayList<Value> generateChunks(String chunk);
+    public ArrayList<byte[]> generateChunks(String chunk);
 }

@@ -7,9 +7,10 @@ public class ChannelName {
     private ArrayList<String> hashtagsPublished;
     private HashMap<String, ArrayList<Value>> userVideoFilesMap;
 
-    public ChannelName(String channelName, ArrayList<String> hashtagsPublished, HashMap<String, ArrayList<Value>> userVideoFilesMap){
+    public ChannelName(String channelName, ArrayList<String> hashtagsPublished, HashMap<String, ArrayList<Value>> userVideoFilesMap) {
         this.channelName = channelName;
         this.hashtagsPublished = hashtagsPublished;
         this.userVideoFilesMap = userVideoFilesMap;
     }
+
 }

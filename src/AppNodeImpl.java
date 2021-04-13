@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class AppNodeImpl implements Publisher, Consumer{
+
     @Override
     public void addHashTag(String hashtag) {
 
@@ -89,9 +90,9 @@ public class AppNodeImpl implements Publisher, Consumer{
     public static void main(String[] args) {
         Publisher p = new AppNodeImpl();
         //generateChunks argument is the filepath
-        ArrayList<byte[]> inputArraylist = p.generateChunks("C:\\Users\\Kostas\\IdeaProjects\\Distributed Systems\\src\\DIMAKHS.mp4");
+        ArrayList<byte[]> inputArraylist = p.generateChunks("C:\\Users\\miked\\Videos\\Captures\\Numb (Official Video) - Linkin Park - YouTube - Google Chrome 2020-04-03 14-10-06.mp4");
         try {
-            File nf = new File("C:/Users/Kostas/Desktop/test.mp4");
+            File nf = new File("C:/Users/miked/Desktop/test.mp4");
             for (byte[] ar : inputArraylist) {
                 FileOutputStream fw = new FileOutputStream(nf, true);
                 try {

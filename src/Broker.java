@@ -11,11 +11,11 @@ interface Broker extends Node{
 
     public Consumer acceptConnection(Consumer consumer);
 
-    public void notifyPublisher(String );
+    public void notifyPublisher(String str);
 
     public void notifyBrokersOnChanges();
 
     public void pull(String channel_or_hashtag);
 
-    public void filterConsumers(String );
+    public void filterConsumers( );
 }
