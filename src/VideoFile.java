@@ -1,34 +1,16 @@
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 
 public class VideoFile {
 
-    private String videoName;
-    private String channelName;
-    private String dateCreated;
-    private String length;
-    private String frameRate;
-    private String frameWidth;
-    private String frameHeight;
-    private ArrayList<String> associatedHashtags;
-    private Byte[] videoFileChunk;
-
-    public VideoFile(String videoName, String channelName, String dateCreated, String length, String frameRate, String frameWidth,
-                     String frameHeight, ArrayList<String> associatedHashtags, Byte[] videoFileChunk) {
-        this.videoName = videoName;
-        this.channelName = channelName;
-        this.dateCreated = dateCreated;
-        this.length = length;
-        this.frameRate = frameRate;
-        this.frameWidth = frameWidth;
-        this.frameHeight = frameHeight;
-        this.associatedHashtags = associatedHashtags;
-        this.videoFileChunk = videoFileChunk;
+    private String filepath;
+    public VideoFile(String filepath){
+        this.filepath = filepath;
     }
 
-    public byte[] getVideoFileChunk(String filepath) {
+    public byte[] getVideoFileChunk() {
+        String filepath = this.getFilepath();
         try {
             FileInputStream fin = new FileInputStream(new File(filepath));
             byte[] buffer = new byte[(int)new File(filepath).length()];
@@ -40,5 +22,9 @@ public class VideoFile {
             e.printStackTrace();
         }
         return new byte[0];
+    }
+
+    public String getFilepath() {
+        return this.filepath;
     }
 }
