@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -135,7 +136,7 @@ public class BrokerImpl implements Broker{
 
         Socket requestSocket = null;
         try {
-            requestSocket = new Socket("127.0.0.1", 4321);
+            requestSocket = new Socket(InetAddress.getByName("127.0.0.1"), 4321);
         }
         catch (UnknownHostException e) {
             e.printStackTrace();
