@@ -8,6 +8,7 @@ interface Publisher extends Node{
     public void addHashTag(String hashtag);
 
     public void removeHashTag(String hashtag);
+
     public List<Broker> getBrokerList();
 
     public Broker hashTopic(String hashtopic);

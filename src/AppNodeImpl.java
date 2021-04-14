@@ -1,6 +1,7 @@
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -63,7 +64,7 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
     @Override
-    public void init(int i) {
+    public void init() {
 
     }
 
@@ -73,8 +74,8 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
     @Override
-    public void connect() {
-
+    public Socket connect() {
+        return null;
     }
 
     @Override

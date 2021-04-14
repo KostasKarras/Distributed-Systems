@@ -5,7 +5,7 @@ interface Broker extends Node{
     static final List<Consumer> registerUsers = null;
     static final List<Publisher> registerPublishers = null;
 
-    public void calculateKeys();
+    public byte[] calculateKeys(int id);
 
     public Publisher acceptConnection(Publisher publisher);
 

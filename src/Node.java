@@ -1,15 +1,17 @@
+import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.List;
 
 interface Node {
 
-    static final List<Broker> brokers = null;
+    static List<Broker> brokers = new ArrayList<>();
 
-    public void init(int i) throws UnknownHostException;
+    public void init() throws UnknownHostException;
 
     public List<Broker> getBrokers();
 
-    public void connect();
+    public Socket connect();
 
     public void disconnect();
 
