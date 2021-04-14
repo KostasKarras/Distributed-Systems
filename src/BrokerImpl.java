@@ -2,22 +2,28 @@ import java.util.List;
 import java.net.*;
 import java.io.*;
 
-public class BrokerImpl implements Broker{
+public class BrokerImpl implements Broker {
 
     /** Class Variables */
+    private static String ID;
+    private static byte[] brokerHash;
+    private static int current_threads = 1;
     private static List<Broker> brokers = null;
     private static List<Consumer> registeredUsers = null;
     private static List<Publisher> registeredPublishers = null;
 
-    /** Main method, to start the servers. */
+    /** Main method, to start the servers */
     public static void main(String[] args) {
-        new BrokerImpl().openServer(4321, 4);
+        new BrokerImpl().initialize(4321);
     }
 
-    /** Constructor */
-    private void openServer(int port, int numberOfThreads) {
+    /** Initializer Method */
+    public void initialize(int port) {
+
+        brokers.add(this);
 
         ServerSocket serverSocket;
+        Socket connectionSocket;
 
         try {
             serverSocket = new ServerSocket(port);
@@ -26,60 +32,62 @@ public class BrokerImpl implements Broker{
             throw new RuntimeException("Could not create ServerSocket ", e);
         }
 
-        // Create a series of threads and start them.
-        for (int i=0; i<numberOfThreads; i++) {
-            new Handler(serverSocket, i).start();
-        }
-    }
+        String ip_address = serverSocket.getInetAddress().toString();
+        ID = String.format("Broker_%s:%d", ip_address, port);
+        brokerHash = calculateKeys(ID);
 
-    /** A Thread subclass to handle one client conversation. */
-    static class Handler extends Thread {
-        final ServerSocket serverSocket;
-        int threadNumber;
-
-        /** Construct a Handler. */
-        Handler(ServerSocket s, int i) {
-            serverSocket = s;
-            threadNumber = i;
-            setName("Thread " + threadNumber);
-        }
-
-        public void run() {
-            // Wait for a connection. Synchronized on the ServerSocket while calling its accept() method.
-            while (true) {
+        while (true) {
+            try {
+                connectionSocket = serverSocket.accept();
+                new Handler(connectionSocket, current_threads).start();
+                current_threads++;
+            } catch (IOException e) {
+                e.printStackTrace();
+                return;
+            } finally {
                 try {
-                    System.out.println(getName() + " waiting");
-
-                    Socket clientSocket;
-                    // Wait here for the next connection.
-                    synchronized (serverSocket) {
-                        clientSocket = serverSocket.accept();
-                    }
-                    System.out.println(getName() + " starting, IP=" + clientSocket.getInetAddress());
-
-                    ObjectOutputStream objectOutputStream = new ObjectOutputStream(clientSocket.getOutputStream());
-                    ObjectInputStream objectInputStream = new ObjectInputStream(clientSocket.getInputStream());
-
-                    int id = objectInputStream.readInt();
-
-                    // If-else statements and calling of specific acceptConnection.
-
-                    System.out.println(getName() + " ended");
-                    clientSocket.close();
+                    serverSocket.close();
                 } catch (IOException e) {
-                    System.out.println(getName() + ": IO Error on socket " + e);
-                    return;
+                    e.printStackTrace();
                 }
             }
         }
     }
 
-    public List<Broker> getBrokers() {
-        return brokers;
+    /** A Thread subclass to handle one client conversation */
+    static class Handler extends Thread {
+        final Socket socket;
+        int threadNumber;
+        ObjectInputStream objectInputStream;
+        ObjectOutputStream objectOutputStream;
+
+        /** Construct a Handler */
+        Handler(Socket s, int current_thread) {
+            socket = s;
+            threadNumber = current_thread;
+            setName("Thread " + threadNumber);
+        }
+
+        public void run() {
+            while (true) {
+                try {
+                    objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
+                    objectInputStream = new ObjectInputStream(socket.getInputStream());
+
+                    int id = objectInputStream.readInt();
+
+                    // If-else statements and calling of specific acceptConnection.
+
+                    socket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
-    public void calculateKeys() {
-
+    public byte[] calculateKeys(String ID) {
+        return null;
     }
 
     public Publisher acceptConnection(Publisher publisher) {
@@ -106,19 +114,30 @@ public class BrokerImpl implements Broker{
 
     }
 
-    public void init(int i) {
-
+    public List<Broker> getBrokers() {
+        return brokers;
     }
 
+    public Socket connect() {
+        Socket requestSocket = null;
 
-
-    public void connect() {
-
+        try {
+            requestSocket = new Socket("127.0.0.1", 4321);
+        } catch (UnknownHostException unknownHost) {
+            System.err.println("You are trying to connect to an unknown host.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return requestSocket;
     }
 
-    public void disconnect() {
-
-    }
+    public void disconnect(Socket s) {
+        try {
+            s.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    };
 
     public void updateNodes() {
 
