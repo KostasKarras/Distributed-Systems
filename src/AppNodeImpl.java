@@ -4,10 +4,13 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.ObjIntConsumer;
 
 public class AppNodeImpl implements Publisher, Consumer{
 
     private static Socket requestSocket;
+    private static ObjectOutputStream objectOutputStream;
+    private static ObjectInputStream objectInputStream;
 
     @Override
     public void addHashTag(String hashtag) {
@@ -31,44 +34,30 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     @Override
     public void push(String hashtags, VideoFile video) {
+
         ArrayList<byte[]> chunks = generateChunks(video.getFilepath());//feygei
-        ObjectOutputStream objectOutputStream = null;
-        ObjectInputStream objectInputStream = null;
 
         try {
 
-            objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
-            objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
+            objectOutputStream.writeObject(1);
+            objectOutputStream.flush();
 
-            try {
-                objectOutputStream.writeObject(chunks.size());
-                objectOutputStream.flush();
+            objectOutputStream.writeObject(chunks.size());
+            objectOutputStream.flush();
 
-                while (!chunks.isEmpty()) {
-                    System.out.println("Size of ArrayList: " + chunks.size());
-                    byte[] clientToServer = chunks.remove(0);
-                    System.out.println("Size clientToServer: " + clientToServer.length);
-                    objectOutputStream.write(clientToServer);
-                    objectOutputStream.flush();
-                }
-                objectOutputStream.writeObject("1");
+            while (!chunks.isEmpty()) {
+                System.out.println("Size of ArrayList: " + chunks.size());
+                byte[] clientToServer = chunks.remove(0);
+                System.out.println("Size clientToServer: " + clientToServer.length);
+                objectOutputStream.write(clientToServer);
                 objectOutputStream.flush();
-            } catch (UnknownHostException unknownHost) {
-                System.err.println("You are trying to connect to an unknown host!");
-            } catch (IOException ioException) {
-                ioException.printStackTrace();
-            } finally {
-                try {
-                    objectInputStream.close();
-                    objectOutputStream.close();
-                } catch (IOException ioException) {
-                    ioException.printStackTrace();
-                }
             }
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+            objectOutputStream.writeObject("1");
+            objectOutputStream.flush();
+        } catch (UnknownHostException unknownHost) {
+            System.err.println("You are trying to connect to an unknown host!");
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
         }
     }
 
@@ -106,6 +95,19 @@ public class AppNodeImpl implements Publisher, Consumer{
     @Override
     public void initialize(int port) {
 
+        try {
+            requestSocket = connect();
+            objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
+            objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
+        VideoFile vf = new VideoFile("C:\\Users\\miked\\Videos\\Captures\\Numb (Official Video) - Linkin Park - YouTube - Google Chrome 2020-04-03 14-10-06.mp4");
+        push("#TIPOTES", vf);
+
+        disconnect();
+
     }
 
     @Override
@@ -129,11 +131,19 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     }
 
-    public void disconnect(Socket s) {
+    public void disconnect() {
         try {
-            s.close();
+            objectOutputStream.writeObject(0);
+            objectOutputStream.flush();
+
+            objectInputStream.close();
+            objectOutputStream.close();
+            requestSocket.close();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+        finally {
+            System.out.println("Socket disconnected!");
         }
     };
 
@@ -143,14 +153,9 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
     public static void main(String[] args) {
-        Publisher p = new AppNodeImpl();
 
-        requestSocket = p.connect();
+        new AppNodeImpl().initialize(4321);
 
-        VideoFile vf = new VideoFile("C:\\Users\\miked\\Videos\\Captures\\Numb (Official Video) - Linkin Park - YouTube - Google Chrome 2020-04-03 14-10-06.mp4");
-        p.push("#TIPOTES", vf);
-
-        p.disconnect(requestSocket);
     }
 
     @Override

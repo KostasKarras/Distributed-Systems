@@ -13,7 +13,7 @@ interface Node {
 
     public Socket connect();
 
-    public void disconnect(Socket s);
+    public void disconnect();
 
     public void updateNodes();
 
