@@ -23,12 +23,14 @@ public class BrokerImpl implements Broker{
     Socket connectionSocket = null;
 
     public static void main(String[] args) {
-        new BrokerImpl().openServer();
+        new BrokerImpl().openServer(4321);
+        new BrokerImpl().openServer(4421);
+        new BrokerImpl().openServer(4521);
     }
 
-    void openServer() {
+    void openServer(int number) {
         try {
-            serverSocket = new ServerSocket(4321, 6);
+            serverSocket = new ServerSocket(number, 6);
 
             while (true) {
                 connectionSocket = serverSocket.accept();
