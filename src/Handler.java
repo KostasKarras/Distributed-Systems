@@ -8,6 +8,7 @@ public class Handler extends Thread {
     ObjectOutputStream objectOutputStream;
     byte[] b = new byte[4096];
     Socket socket;
+    static int version = 1;
 
     public Handler(Socket socket) {
         this.socket = socket;
@@ -25,20 +26,23 @@ public class Handler extends Thread {
             byte[] chunk;
             ArrayList<byte[]> chunks = new ArrayList<byte[]>();
 
+            message = (String) objectInputStream.readObject();
+            if(message.equals("Hello! New Client here!"))
+                System.out.println(socket.getInetAddress().getHostAddress() + ">New Client connected.");
+
+            objectOutputStream.writeObject("Connection successful!");
+            objectOutputStream.flush();
+
             int size = (int) objectInputStream.readObject();
-            System.out.println("Size of the Arraylist is: " + size);
 
             for (int i = 0;i < size;i++){
                 chunk = new byte[4096];
                 chunk = objectInputStream.readAllBytes();
                 chunks.add(chunk);
-                System.out.println(this.socket.getInetAddress().getHostAddress() + ">" + chunk);
             }
 
-            System.out.println("My Arraylist size: " + chunks.size());
-
             try {
-                File nf = new File("C:/Users/Kostas/Desktop/test.mp4");
+                File nf = new File("C:/Users/Kostas/Desktop/test" + version++ + ".mp4");
                 for (byte[] ar : chunks) {
                     FileOutputStream fw = new FileOutputStream(nf, true);
                     try {
@@ -47,6 +51,10 @@ public class Handler extends Thread {
                         fw.close();
                     }
                 }
+                System.out.println(socket.getInetAddress().getHostAddress() + ">The file received Successfully!");
+                message = (String) objectInputStream.readObject();
+                if (message.equals("Bye"))
+                    System.out.println(socket.getInetAddress().getHostAddress() + ">Client disconnected.");
             } catch (IOException e) {
                 e.printStackTrace();
             }
