@@ -7,6 +7,8 @@ import java.util.List;
 
 public class AppNodeImpl implements Publisher, Consumer{
 
+    private static Socket requestSocket;
+
     @Override
     public void addHashTag(String hashtag) {
 
@@ -30,12 +32,10 @@ public class AppNodeImpl implements Publisher, Consumer{
     @Override
     public void push(String hashtags, VideoFile video) {
         ArrayList<byte[]> chunks = generateChunks(video.getFilepath());//feygei
-        Socket requestSocket = null;
         ObjectOutputStream objectOutputStream = null;
         ObjectInputStream objectInputStream = null;
 
         try {
-            requestSocket = connect();
 
             objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
             objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
@@ -61,7 +61,6 @@ public class AppNodeImpl implements Publisher, Consumer{
                 try {
                     objectInputStream.close();
                     objectOutputStream.close();
-                    requestSocket.close();
                 } catch (IOException ioException) {
                     ioException.printStackTrace();
                 }
@@ -146,8 +145,12 @@ public class AppNodeImpl implements Publisher, Consumer{
     public static void main(String[] args) {
         Publisher p = new AppNodeImpl();
 
+        requestSocket = p.connect();
+
         VideoFile vf = new VideoFile("C:\\Users\\miked\\Videos\\Captures\\Numb (Official Video) - Linkin Park - YouTube - Google Chrome 2020-04-03 14-10-06.mp4");
         p.push("#TIPOTES", vf);
+
+        p.disconnect(requestSocket);
     }
 
     @Override

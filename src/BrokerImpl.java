@@ -1,6 +1,4 @@
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -42,17 +40,17 @@ public class BrokerImpl implements Broker{
         Socket connectionSocket = null;
 
         try {
-            serverSocket = new ServerSocket(4321);
-
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
+            serverSocket = new ServerSocket(port);
+        } catch(IOException e) {
+            /* Crash the server if IO fails. Something bad has happened. */
+            throw new RuntimeException("Could not create ServerSocket ", e);
         }
 
         ID = serverSocket.getLocalSocketAddress().toString();
         brokerHash = calculateKeys(ID);
 
         while(true) {
-            Node x = acceptConnection(serverSocket, connectionSocket);
+            acceptConnection(serverSocket, connectionSocket);
         }
 
     }
@@ -76,7 +74,7 @@ public class BrokerImpl implements Broker{
 
     }
 
-    public Node acceptConnection(ServerSocket serverSocket, Socket socket) {
+    public void acceptConnection(ServerSocket serverSocket, Socket socket) {
         try {
             socket = serverSocket.accept();
             new Handler(socket, current_threads).start();
@@ -92,10 +90,6 @@ public class BrokerImpl implements Broker{
                 e.printStackTrace();
             }
         }
-
-
-
-        return null;
     }
 
     @Override
@@ -161,6 +155,7 @@ public class BrokerImpl implements Broker{
 
     /** A Thread subclass to handle one client conversation */
     class Handler extends Thread {
+
         final Socket socket;
         int threadNumber;
         ObjectInputStream objectInputStream;
@@ -171,6 +166,12 @@ public class BrokerImpl implements Broker{
             socket = s;
             threadNumber = current_thread;
             setName("Thread " + threadNumber);
+            try {
+                objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
+                objectInputStream = new ObjectInputStream(socket.getInputStream());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         public void run() {
@@ -181,14 +182,20 @@ public class BrokerImpl implements Broker{
 
                     int id = objectInputStream.readInt();
 
+                    //if (id == 1)
                     // If-else statements and calling of specific acceptConnection.
 
-                    socket.close();
+
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+                finally {
+                    disconnect(socket);
+                }
+
             }
         }
+
     }
 
 }
