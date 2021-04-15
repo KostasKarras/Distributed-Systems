@@ -32,15 +32,12 @@ public class AppNodeImpl implements Publisher, Consumer{
         Socket requestSocket = null;
         ObjectOutputStream objectOutputStream = null;
         ObjectInputStream objectInputStream = null;
-        ByteArrayOutputStream b = null;
 
         try {
             requestSocket = new Socket(InetAddress.getByName("127.0.0.1"), 4321);
 
             objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
             objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
-            b = new ByteArrayOutputStream();
-
 
             try {
                 objectOutputStream.writeObject(chunks.size());
@@ -50,8 +47,8 @@ public class AppNodeImpl implements Publisher, Consumer{
                     System.out.println("Size of ArrayList: " + chunks.size());
                     byte[] clientToServer = chunks.remove(0);
                     System.out.println("Size clientToServer: " + clientToServer.length);
-                    b.write(clientToServer);
-                    b.flush();
+                    objectOutputStream.write(clientToServer);
+                    objectOutputStream.flush();
                 }
                 objectOutputStream.writeObject("1");
                 objectOutputStream.flush();
@@ -63,7 +60,6 @@ public class AppNodeImpl implements Publisher, Consumer{
                 try {
                     objectInputStream.close();
                     objectOutputStream.close();
-                    b.close();
                     requestSocket.close();
                 } catch (IOException ioException) {
                     ioException.printStackTrace();
@@ -148,7 +144,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 //        } catch (IOException e) {
 //            e.printStackTrace();
 //        }
-        VideoFile vf = new VideoFile("C:\\Users\\Kostas\\Downloads\\yt1s.com - Dji Mavic mini  Video test cinematic_720p.mp4");
+        VideoFile vf = new VideoFile("C:\\Users\\Kostas\\IdeaProjects\\Distributed Systems\\src\\DIMAKHS.mp4");
         Value v = new Value(vf);
         p.push("#TIPOTES", v);
     }
