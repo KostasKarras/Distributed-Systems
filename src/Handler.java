@@ -6,7 +6,6 @@ public class Handler extends Thread {
 
     ObjectInputStream objectInputStream;
     ObjectOutputStream objectOutputStream;
-    ByteArrayInputStream byteArrayInputStream;
     byte[] b = new byte[4096];
     Socket socket;
 
@@ -15,7 +14,6 @@ public class Handler extends Thread {
         try {
             objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
             objectInputStream = new ObjectInputStream(socket.getInputStream());
-            byteArrayInputStream = new ByteArrayInputStream(b);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -31,10 +29,10 @@ public class Handler extends Thread {
             System.out.println("Size of the Arraylist is: " + size);
 
             for (int i = 0;i < size;i++){
-                chunk = byteArrayInputStream.readAllBytes();
+                chunk = new byte[4096];
+                chunk = objectInputStream.readAllBytes();
                 chunks.add(chunk);
                 System.out.println(this.socket.getInetAddress().getHostAddress() + ">" + chunk);
-                byteArrayInputStream = new ByteArrayInputStream(b);
             }
 
             System.out.println("My Arraylist size: " + chunks.size());
@@ -58,7 +56,6 @@ public class Handler extends Thread {
             try {
                 objectInputStream.close();
                 objectOutputStream.close();
-                byteArrayInputStream.close();
                 socket.close();
             } catch (IOException ioException) {
                 ioException.printStackTrace();
