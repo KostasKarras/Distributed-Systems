@@ -22,6 +22,7 @@ public class BrokerImpl implements Broker{
     ServerSocket serverSocket;
     Socket connectionSocket = null;
 
+    //THE LAST TWO SERVERS DON'T RUN!!!
     public static void main(String[] args) {
         new BrokerImpl().openServer(4321);
         new BrokerImpl().openServer(4421);
@@ -50,11 +51,13 @@ public class BrokerImpl implements Broker{
         }
     }
 
+    //DONE!
     @Override
     public void init() throws UnknownHostException {
 
     }
 
+    //DONE!
     @Override
     public byte[] calculateKeys(int id) {
 
@@ -76,57 +79,67 @@ public class BrokerImpl implements Broker{
 
     }
 
+    //DONE!
     @Override
     public Publisher acceptConnection(Publisher publisher) {
         return null;
     }
 
+    //DONE!
     @Override
     public Consumer acceptConnection(Consumer consumer) {
         return null;
     }
 
+    //PENDING!
     @Override
     public void notifyPublisher(String str) {
 
     }
 
+    //PENDING!
     @Override
     public void notifyBrokersOnChanges() {
 
     }
 
+    //PENDING!
     @Override
     public void pull(String channel_or_hashtag) {
 
     }
 
+    //PENDING!
     @Override
     public void filterConsumers() {
 
     }
 
-
+    //DONE!
     @Override
     public List<Broker> getBrokers() {
         return brokers;
     }
 
+    //DONE!
     @Override
     public Socket connect() {
         return null;
     }
 
+    //DONE!
     @Override
     public void disconnect() {
 
     }
 
+    //PENDING!
     @Override
     public void updateNodes() {
 
     }
 
+    //DONE!
     public int getIPSumValue(String ip) {
         String parts[] = ip.split("\\.");
         int ip_sum = 0;
