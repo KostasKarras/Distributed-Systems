@@ -10,7 +10,7 @@ public class VideoFile {
     }
 
     public byte[] getVideoFileChunk() {
-        String filepath = this.getFilepath();
+
         try {
             FileInputStream fin = new FileInputStream(new File(filepath));
             byte[] buffer = new byte[(int)new File(filepath).length()];

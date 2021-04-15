@@ -1,7 +1,7 @@
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
+import java.net.InetAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,8 +28,49 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
     @Override
-    public void push(String hashtags, Value video) {
+    public void push(String hashtags, VideoFile video) {
+        ArrayList<byte[]> chunks = generateChunks(video.getFilepath());//feygei
+        Socket requestSocket = null;
+        ObjectOutputStream objectOutputStream = null;
+        ObjectInputStream objectInputStream = null;
 
+        try {
+            requestSocket = connect();
+
+            objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
+            objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
+
+            try {
+                objectOutputStream.writeObject(chunks.size());
+                objectOutputStream.flush();
+
+                while (!chunks.isEmpty()) {
+                    System.out.println("Size of ArrayList: " + chunks.size());
+                    byte[] clientToServer = chunks.remove(0);
+                    System.out.println("Size clientToServer: " + clientToServer.length);
+                    objectOutputStream.write(clientToServer);
+                    objectOutputStream.flush();
+                }
+                objectOutputStream.writeObject("1");
+                objectOutputStream.flush();
+            } catch (UnknownHostException unknownHost) {
+                System.err.println("You are trying to connect to an unknown host!");
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+            } finally {
+                try {
+                    objectInputStream.close();
+                    objectOutputStream.close();
+                    requestSocket.close();
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                }
+            }
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -64,7 +105,7 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
     @Override
-    public void init() {
+    public void initialize(int port) {
 
     }
 
@@ -75,13 +116,27 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     @Override
     public Socket connect() {
-        return null;
+
+        Socket requestSocket = null;
+
+        try {
+            requestSocket = new Socket(InetAddress.getByName("127.0.0.1"), 4321);
+        } catch (UnknownHostException unknownHost) {
+            System.err.println("You are trying to connect to an unknown host.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return requestSocket;
+
     }
 
-    @Override
-    public void disconnect() {
-
-    }
+    public void disconnect(Socket s) {
+        try {
+            s.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    };
 
     @Override
     public void updateNodes() {
@@ -90,21 +145,9 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     public static void main(String[] args) {
         Publisher p = new AppNodeImpl();
-        //generateChunks argument is the filepath
-        ArrayList<byte[]> inputArraylist = p.generateChunks("C:\\Users\\miked\\Videos\\Captures\\Numb (Official Video) - Linkin Park - YouTube - Google Chrome 2020-04-03 14-10-06.mp4");
-        try {
-            File nf = new File("C:/Users/miked/Desktop/test.mp4");
-            for (byte[] ar : inputArraylist) {
-                FileOutputStream fw = new FileOutputStream(nf, true);
-                try {
-                    fw.write(ar);
-                } finally {
-                    fw.close();
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+
+        VideoFile vf = new VideoFile("C:\\Users\\miked\\Videos\\Captures\\Numb (Official Video) - Linkin Park - YouTube - Google Chrome 2020-04-03 14-10-06.mp4");
+        p.push("#TIPOTES", vf);
     }
 
     @Override

@@ -13,7 +13,7 @@ interface Publisher extends Node{
 
     public Broker hashTopic(String hashtopic);
 
-    public void push(String hashtags, Value video);
+    public void push(String hashtags, VideoFile video);
 
     public void notifyFailure(Broker broker);
 

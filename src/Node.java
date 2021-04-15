@@ -7,13 +7,13 @@ interface Node {
 
     static List<Broker> brokers = new ArrayList<>();
 
-    public void init() throws UnknownHostException;
+    public void initialize(int port) throws UnknownHostException;
 
     public List<Broker> getBrokers();
 
     public Socket connect();
 
-    public void disconnect();
+    public void disconnect(Socket s);
 
     public void updateNodes();
 

@@ -1,4 +1,6 @@
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -7,41 +9,37 @@ import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class BrokerImpl implements Broker{
 
-    public static int ID;
-    public static ArrayList<String> brokerHashtags;
-    public static byte[] brokerHash;
-
-    public static final int NUM_PUBLISHER_THREADS = 5;
-    public static final int NUM_CONSUMER_THREADS = 5;
-    public static final int NUM_THREADS = NUM_PUBLISHER_THREADS + NUM_CONSUMER_THREADS;
-    public static int current_threads = 0;
+    /** Class Variables */
+    private static String ID;
+    private static byte[] brokerHash;
+    private static int current_threads = 1;
+    private static List<Broker> brokers = null;
+    private static List<Consumer> registeredUsers = null;
+    private static List<Publisher> registeredPublishers = null;
+    private static HashMap<String, String> brokerHashtags;
 
     public static void main(String[] args) {
-       new BrokerImpl();
-    }
-
-    public BrokerImpl() {
         try {
-            init();
+            new BrokerImpl().initialize(4321);
         } catch (UnknownHostException uhe ) {
             uhe.printStackTrace();
         }
     }
 
     @Override
-    public void init() throws UnknownHostException {
+    public void initialize(int port) throws UnknownHostException {
 
-        brokerHashtags = new ArrayList<>();
+        brokerHashtags = new HashMap<>();
 
-        brokers.add(this);
+        //brokers.add(this);
 
         ServerSocket serverSocket = null;
         Socket connectionSocket = null;
-        String message = null;
 
         try {
             serverSocket = new ServerSocket(4321);
@@ -50,9 +48,7 @@ public class BrokerImpl implements Broker{
             ioException.printStackTrace();
         }
 
-        String ip_address = serverSocket.getInetAddress().getLocalHost().getHostAddress();
-        int port = serverSocket.getLocalPort();
-        ID = getIPSumValue(ip_address) + port;
+        ID = serverSocket.getLocalSocketAddress().toString();
         brokerHash = calculateKeys(ID);
 
         while(true) {
@@ -62,14 +58,12 @@ public class BrokerImpl implements Broker{
     }
 
     @Override
-    public byte[] calculateKeys(int id) {
+    public byte[] calculateKeys(String id) {
 
         byte[] digest = null;
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
-            ByteBuffer bb = ByteBuffer.allocate(4);
-            bb.putInt(id);
-            byte[] idByteArray = bb.array();
+            byte[] idByteArray = id.getBytes();
             md.update(idByteArray);
             digest = md.digest();
         }
@@ -85,12 +79,21 @@ public class BrokerImpl implements Broker{
     public Node acceptConnection(ServerSocket serverSocket, Socket socket) {
         try {
             socket = serverSocket.accept();
-        } catch (IOException e) {
+            new Handler(socket, current_threads).start();
+            current_threads++;
+        }
+        catch (IOException e) {
             e.printStackTrace();
         }
+        finally {
+            try {
+                serverSocket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
 
-        new Broker_Operation(socket, current_threads).start();
-        current_threads++;
+
 
         return null;
     }
@@ -131,39 +134,61 @@ public class BrokerImpl implements Broker{
         return brokers;
     }
 
-    @Override
     public Socket connect() {
-
         Socket requestSocket = null;
+
         try {
             requestSocket = new Socket(InetAddress.getByName("127.0.0.1"), 4321);
-        }
-        catch (UnknownHostException e) {
-            e.printStackTrace();
+        } catch (UnknownHostException unknownHost) {
+            System.err.println("You are trying to connect to an unknown host.");
         } catch (IOException e) {
             e.printStackTrace();
         }
-        finally {
-            return requestSocket;
+        return requestSocket;
+    }
+
+    public void disconnect(Socket s) {
+        try {
+            s.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-    }
-
-    @Override
-    public void disconnect() {
-
-    }
-
+    };
     @Override
     public void updateNodes() {
 
     }
 
-    public int getIPSumValue(String ip) {
-        String parts[] = ip.split("\\.");
-        int ip_sum = 0;
-        for (int part = 0; part<4; part++) {
-            ip_sum += Integer.parseInt(parts[part]);
+    /** A Thread subclass to handle one client conversation */
+    class Handler extends Thread {
+        final Socket socket;
+        int threadNumber;
+        ObjectInputStream objectInputStream;
+        ObjectOutputStream objectOutputStream;
+
+        /** Construct a Handler */
+        Handler(Socket s, int current_thread) {
+            socket = s;
+            threadNumber = current_thread;
+            setName("Thread " + threadNumber);
         }
-        return ip_sum;
+
+        public void run() {
+            while (true) {
+                try {
+                    objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
+                    objectInputStream = new ObjectInputStream(socket.getInputStream());
+
+                    int id = objectInputStream.readInt();
+
+                    // If-else statements and calling of specific acceptConnection.
+
+                    socket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
+
 }
