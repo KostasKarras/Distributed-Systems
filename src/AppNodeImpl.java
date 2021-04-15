@@ -5,7 +5,124 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AppNodeImpl implements Publisher, Consumer{
+public class AppNodeImpl extends Thread implements Publisher, Consumer{
+    @Override
+    public void push(String hashtags, Value video) {
+        this.start();
+    }
+
+    Value value;
+    String type;
+    public AppNodeImpl(String type, Value value){
+        this.type = type;
+        this.value = value;
+    }
+
+    public ArrayList<byte[]> generateChunks(String filepath) {
+        ArrayList<byte[]> my_arraylist = new ArrayList<byte []>();
+
+        VideoFile vf = new VideoFile(filepath);
+
+        boolean flag = true;
+        int i = 0;
+        byte[] inputBuffer = vf.getVideoFileChunk();
+
+        while (i < inputBuffer.length) {
+            byte[] buffer = new byte[4096];
+            for (int j = 0;j < buffer.length;j++) {
+                if (i < inputBuffer.length)
+                    buffer[j] = inputBuffer[i++];
+            }
+            my_arraylist.add(buffer);
+        }
+        return my_arraylist;
+    }
+
+    public void run(){
+        ArrayList<byte[]> chunks = generateChunks(this.getValue().getFilepath());
+        Socket requestSocket = null;
+        ObjectOutputStream objectOutputStream = null;
+        ObjectInputStream objectInputStream = null;
+        String message;
+
+        try {
+            requestSocket = new Socket(InetAddress.getByName("127.0.0.1"), 4321);
+
+            objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
+            objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
+
+            try {
+                objectOutputStream.writeObject("Hello! New Client here!");
+                objectOutputStream.flush();
+
+                message = (String) objectInputStream.readObject();
+                System.out.println("Server>" + message);
+
+                objectOutputStream.writeObject(chunks.size());
+                objectOutputStream.flush();
+
+                while (!chunks.isEmpty()) {
+                    byte[] clientToServer = chunks.remove(0);
+                    objectOutputStream.write(clientToServer);
+                    objectOutputStream.flush();
+                }
+            } catch (UnknownHostException unknownHost) {
+                System.err.println("You are trying to connect to an unknown host!");
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    objectOutputStream.writeObject("Bye");
+                    objectOutputStream.flush();
+                    objectInputStream.close();
+                    objectOutputStream.close();
+                    requestSocket.close();
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                }
+            }
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) {
+//        //generateChunks argument is the filepath
+//        ArrayList<byte[]> inputArraylist = p.generateChunks("C:\\Users\\Kostas\\IdeaProjects\\Distributed Systems\\src\\DIMAKHS.mp4");
+//        try {
+//            File nf = new File("C:/Users/Kostas/Desktop/test.mp4");
+//            for (byte[] ar : inputArraylist) {
+//                FileOutputStream fw = new FileOutputStream(nf, true);
+//                try {
+//                    fw.write(ar);
+//                } finally {
+//                    fw.close();
+//                }
+//            }
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+        VideoFile vf = new VideoFile("C:\\Users\\Kostas\\Downloads\\yt1s.com - Dji Mavic mini  Video test cinematic_720p.mp4");
+        Value v = new Value(vf);
+        //p.push("#TIPOTES", v);
+        Publisher p = new AppNodeImpl("p", v);
+        p.push("#TIPOTES", v);
+
+        VideoFile vf2 = new VideoFile("C:\\Users\\Kostas\\IdeaProjects\\Distributed Systems\\src\\DIMAKHS.mp4");
+        Value v2 = new Value(vf2);
+        //p2.push("#TIPOTES", v2);
+        Publisher p2 = new AppNodeImpl("p", v2);
+        p2.push("#TIPOTES", v2);
+    }
+
+    public Value getValue(){
+        return this.value;
+    }
+
     @Override
     public void addHashTag(String hashtag) {
 
@@ -27,51 +144,6 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
     @Override
-    public void push(String hashtags, Value video) {
-        ArrayList<byte[]> chunks = generateChunks(video.getFilepath());//feygei
-        Socket requestSocket = null;
-        ObjectOutputStream objectOutputStream = null;
-        ObjectInputStream objectInputStream = null;
-
-        try {
-            requestSocket = new Socket(InetAddress.getByName("127.0.0.1"), 4321);
-
-            objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
-            objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
-
-            try {
-                objectOutputStream.writeObject(chunks.size());
-                objectOutputStream.flush();
-
-                while (!chunks.isEmpty()) {
-                    System.out.println("Size of ArrayList: " + chunks.size());
-                    byte[] clientToServer = chunks.remove(0);
-                    System.out.println("Size clientToServer: " + clientToServer.length);
-                    objectOutputStream.write(clientToServer);
-                    objectOutputStream.flush();
-                }
-                objectOutputStream.writeObject("1");
-                objectOutputStream.flush();
-            } catch (UnknownHostException unknownHost) {
-                System.err.println("You are trying to connect to an unknown host!");
-            } catch (IOException ioException) {
-                ioException.printStackTrace();
-            } finally {
-                try {
-                    objectInputStream.close();
-                    objectOutputStream.close();
-                    requestSocket.close();
-                } catch (IOException ioException) {
-                    ioException.printStackTrace();
-                }
-            }
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-        @Override
     public void notifyFailure(Broker broker) {
 
     }
@@ -79,27 +151,6 @@ public class AppNodeImpl implements Publisher, Consumer{
     @Override
     public void notifyBrokersForHashTags(String hashtag) {
 
-    }
-
-    @Override
-    public ArrayList<byte[]> generateChunks(String filepath) {
-        ArrayList<byte[]> my_arraylist = new ArrayList<byte []>();
-
-        VideoFile vf = new VideoFile(filepath);
-
-        boolean flag = true;
-        int i = 0;
-        byte[] inputBuffer = vf.getVideoFileChunk();
-
-        while (i < inputBuffer.length) {
-            byte[] buffer = new byte[4096];
-            for (int j = 0;j < buffer.length;j++) {
-                if (i < inputBuffer.length)
-                    buffer[j] = inputBuffer[i++];
-            }
-            my_arraylist.add(buffer);
-        }
-        return my_arraylist;
     }
 
     @Override
@@ -125,28 +176,6 @@ public class AppNodeImpl implements Publisher, Consumer{
     @Override
     public void updateNodes() {
 
-    }
-
-    public static void main(String[] args) {
-        Publisher p = new AppNodeImpl();
-//        //generateChunks argument is the filepath
-//        ArrayList<byte[]> inputArraylist = p.generateChunks("C:\\Users\\Kostas\\IdeaProjects\\Distributed Systems\\src\\DIMAKHS.mp4");
-//        try {
-//            File nf = new File("C:/Users/Kostas/Desktop/test.mp4");
-//            for (byte[] ar : inputArraylist) {
-//                FileOutputStream fw = new FileOutputStream(nf, true);
-//                try {
-//                    fw.write(ar);
-//                } finally {
-//                    fw.close();
-//                }
-//            }
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-        VideoFile vf = new VideoFile("C:\\Users\\Kostas\\IdeaProjects\\Distributed Systems\\src\\DIMAKHS.mp4");
-        Value v = new Value(vf);
-        p.push("#TIPOTES", v);
     }
 
     @Override
