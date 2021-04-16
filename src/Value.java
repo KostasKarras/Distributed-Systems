@@ -16,7 +16,7 @@ public class Value {
         return this.videoFile.getAssociatedHashtags();
     }
 
-    public void addHashTag(String hashtag){
-        this.videoFile.addHashTag(hashtag);
+    public void addAssociatedHashTags(String hashtag){
+        this.videoFile.addAssociatedHashTags(hashtag);
     }
 }
