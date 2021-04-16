@@ -9,6 +9,7 @@ public class AppNodeImpl extends Thread implements Publisher, Consumer{
     @Override
     public void push(String hashtags, Value video) {
         this.start();
+        addHashTag(hashtags, video);
     }
 
     Value value;
@@ -18,10 +19,10 @@ public class AppNodeImpl extends Thread implements Publisher, Consumer{
         this.value = value;
     }
 
-    public ArrayList<byte[]> generateChunks(String filepath) {
+    public ArrayList<byte[]> generateChunks(String filepath, ArrayList<String> hashtags) {
         ArrayList<byte[]> my_arraylist = new ArrayList<byte []>();
 
-        VideoFile vf = new VideoFile(filepath);
+        VideoFile vf = new VideoFile(filepath, hashtags);
 
         boolean flag = true;
         int i = 0;
@@ -39,14 +40,14 @@ public class AppNodeImpl extends Thread implements Publisher, Consumer{
     }
 
     public void run(){
-        ArrayList<byte[]> chunks = generateChunks(this.getValue().getFilepath());
+        ArrayList<byte[]> chunks = generateChunks(this.getValue().getFilepath(), this.getValue().getAssociatedHashtags());
         Socket requestSocket = null;
         ObjectOutputStream objectOutputStream = null;
         ObjectInputStream objectInputStream = null;
         String message;
 
         try {
-            requestSocket = new Socket(InetAddress.getByName("127.0.0.1"), 4321);
+            requestSocket = new Socket(InetAddress.getByName("127.0.0.1"), 4323);
 
             objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
             objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
@@ -106,13 +107,17 @@ public class AppNodeImpl extends Thread implements Publisher, Consumer{
 //        } catch (IOException e) {
 //            e.printStackTrace();
 //        }
-        VideoFile vf = new VideoFile("C:\\Users\\Kostas\\Downloads\\yt1s.com - Dji Mavic mini  Video test cinematic_720p.mp4");
+        ArrayList<String> hashtags1 = new ArrayList<String>();
+        hashtags1.add("First File");
+        VideoFile vf = new VideoFile("C:\\Users\\Kostas\\Downloads\\yt1s.com - Dji Mavic mini  Video test cinematic_720p.mp4", hashtags1);
         Value v = new Value(vf);
         //p.push("#TIPOTES", v);
         Publisher p = new AppNodeImpl("p", v);
         p.push("#TIPOTES", v);
 
-        VideoFile vf2 = new VideoFile("C:\\Users\\Kostas\\IdeaProjects\\Distributed Systems\\src\\DIMAKHS.mp4");
+        ArrayList<String> hashtags2 = new ArrayList<String>();
+        hashtags2.add("Second File");
+        VideoFile vf2 = new VideoFile("C:\\Users\\Kostas\\IdeaProjects\\Distributed Systems\\src\\DIMAKHS.mp4", hashtags2);
         Value v2 = new Value(vf2);
         //p2.push("#TIPOTES", v2);
         Publisher p2 = new AppNodeImpl("p", v2);
@@ -123,19 +128,21 @@ public class AppNodeImpl extends Thread implements Publisher, Consumer{
         return this.value;
     }
 
+    //Hashtags for which the publisher is responsible
+    ArrayList<String> associatedHashtags = null;
     @Override
-    public void addHashTag(String hashtag) {
-
+    public void addHashTag(String hashtag, Value video) {
+        video.addHashTag(hashtag);
     }
 
     @Override
     public void removeHashTag(String hashtag) {
-
+        this.associatedHashtags.remove(hashtag);
     }
 
     @Override
     public List<Broker> getBrokerList() {
-        return null;
+        return brokers;
     }
 
     @Override
@@ -160,7 +167,7 @@ public class AppNodeImpl extends Thread implements Publisher, Consumer{
 
     @Override
     public List<Broker> getBrokers() {
-        return null;
+        return brokers;
     }
 
     @Override
