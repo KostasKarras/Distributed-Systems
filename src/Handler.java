@@ -6,7 +6,6 @@ public class Handler extends Thread {
 
     ObjectInputStream objectInputStream;
     ObjectOutputStream objectOutputStream;
-    byte[] b = new byte[4096];
     Socket socket;
     static int version = 1;
 
