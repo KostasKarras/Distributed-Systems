@@ -5,7 +5,7 @@ interface Publisher extends Node{
 
     static final ChannelName channelName = null;
 
-    public void addHashTag(String hashtag);
+    public void addHashTag(String hashtag, Value video);
 
     public void removeHashTag(String hashtag);
 
@@ -19,5 +19,5 @@ interface Publisher extends Node{
 
     public void notifyBrokersForHashTags(String hashtag);
 
-    public ArrayList<byte[]> generateChunks(String filepath);
+    public ArrayList<byte[]> generateChunks(String filepath, ArrayList<String> hashtags);
 }
