@@ -23,9 +23,15 @@ public class BrokerImpl extends Thread implements Broker{
     Socket connectionSocket = null;
 
     public static void main(String[] args) {
-        new BrokerImpl().start();
-        new BrokerImpl().start();
-        new BrokerImpl().start();
+        BrokerImpl broker1 = new BrokerImpl();
+        BrokerImpl broker2 = new BrokerImpl();
+        BrokerImpl broker3 = new BrokerImpl();
+        brokers.add(broker1);
+        brokers.add(broker2);
+        brokers.add(broker3);
+        broker1.start();
+        broker2.start();
+        broker3.start();
     }
 
     static int port = 4321;
