@@ -5,12 +5,27 @@ public class ChannelName {
 
     private String channelName;
     private ArrayList<String> hashtagsPublished;
-    private HashMap<String, ArrayList<Value>> userVideoFilesMap;
+    private HashMap<String, ArrayList<VideoFile>> userVideoFilesMap;
 
-    public ChannelName(String channelName, ArrayList<String> hashtagsPublished, HashMap<String, ArrayList<Value>> userVideoFilesMap) {
+    public ChannelName(String channelName, ArrayList<String> hashtagsPublished, HashMap<String, ArrayList<VideoFile>> userVideoFilesMap) {
         this.channelName = channelName;
         this.hashtagsPublished = hashtagsPublished;
         this.userVideoFilesMap = userVideoFilesMap;
+    }
+
+    //For new users
+    public ChannelName(String channelName) {
+        this.channelName = channelName;
+        hashtagsPublished = new ArrayList<>();
+        userVideoFilesMap = new HashMap<>();
+    }
+
+    public void addHashTag(String hashtag) {
+        hashtagsPublished.add(hashtag);
+    }
+
+    public void removeHashTag(String hashtag) {
+        hashtagsPublished.remove(hashtag);
     }
 
 }

@@ -26,15 +26,11 @@ public class BrokerImpl implements Broker{
     private static ServerSocket serverSocket;
 
     public static void main(String[] args) {
-        try {
-            new BrokerImpl().initialize(4321);
-        } catch (UnknownHostException uhe ) {
-            uhe.printStackTrace();
-        }
+        new BrokerImpl().initialize(4321);
     }
 
     @Override
-    public void initialize(int port) throws UnknownHostException {
+    public void initialize(int port)  {
 
         brokerHashtags = new HashMap<>();
 
@@ -45,7 +41,8 @@ public class BrokerImpl implements Broker{
         try {
             serverSocket = new ServerSocket(port);
 
-            ID = serverSocket.getLocalSocketAddress().toString();
+            String serverSocketAddress = serverSocket.getLocalSocketAddress().toString();
+            ID = String.format("Broker_%s", serverSocketAddress);
             int brokerHash = calculateKeys(ID);
 
             while(true) {
@@ -86,18 +83,6 @@ public class BrokerImpl implements Broker{
         }
     }
 
-    public void acceptConnection(ServerSocket serverSocket, Socket socket) {
-        try {
-            socket = serverSocket.accept();
-            new Handler(socket, current_threads).start();
-            current_threads++;
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
-
-    }
-
     @Override
     public Publisher acceptConnection(Publisher publisher) {
         return null;
@@ -134,20 +119,13 @@ public class BrokerImpl implements Broker{
         return brokers;
     }
 
-    public Socket connect() {
-        Socket requestSocket = null;
-
-        try {
-            requestSocket = new Socket(InetAddress.getByName("127.0.0.1"), 4321);
-        } catch (UnknownHostException unknownHost) {
-            System.err.println("You are trying to connect to an unknown host.");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return requestSocket;
+    public void connect() {
+        //Pass
     }
 
-    public void disconnect() {}
+    public void disconnect() {
+        //Pass
+    }
 
     @Override
     public void updateNodes() {
@@ -161,7 +139,6 @@ public class BrokerImpl implements Broker{
         int threadNumber;
         ObjectInputStream objectInputStream;
         ObjectOutputStream objectOutputStream;
-        DataInputStream dataInputStream;
 
         /** Construct a Handler */
         Handler(Socket s, int current_thread) {
@@ -176,30 +153,16 @@ public class BrokerImpl implements Broker{
             }
         }
 
-
         public void run() {
 
                 try {
-
-                    while(true) {
-
                         int id = (int) objectInputStream.readObject();
 
                         // If-else statements and calling of specific acceptConnection.
-                        if (id == 0) {
-                            System.out.println("I got 0!");
-                            objectInputStream.close();
-                            objectOutputStream.close();
-                            socket.close();
-                            break;
-                        }
-                        else if (id == 1) {
+                        if (id == 1) {
                             handle_push();
                         }
-                        else {
-                            break;
-                        }
-                    }
+
                 } catch (IOException | ClassNotFoundException e) {
                     e.printStackTrace();
                 }
@@ -207,6 +170,15 @@ public class BrokerImpl implements Broker{
 
         public void handle_push() {
             try {
+
+                String message;
+                message = (String) objectInputStream.readObject();
+                if(message.equals("I want to push a new video!"))
+                    System.out.println(socket.getInetAddress().getHostAddress() + ">New Client connected.");
+
+                objectOutputStream.writeObject("Video is pushed...");
+                objectOutputStream.flush();
+
                 byte[] chunk;
                 ArrayList<byte[]> chunks = new ArrayList<byte[]>();
 

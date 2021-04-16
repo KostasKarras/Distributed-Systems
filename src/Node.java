@@ -11,7 +11,7 @@ interface Node {
 
     public List<Broker> getBrokers();
 
-    public Socket connect();
+    public void connect();
 
     public void disconnect();
 
