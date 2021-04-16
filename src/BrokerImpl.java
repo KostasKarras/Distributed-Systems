@@ -1,9 +1,12 @@
+import javax.xml.crypto.Data;
 import java.io.*;
+import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -14,12 +17,13 @@ public class BrokerImpl implements Broker{
 
     /** Class Variables */
     private static String ID;
-    private static byte[] brokerHash;
+    private static int brokerHash;
     private static int current_threads = 1;
     private static List<Broker> brokers = null;
     private static List<Consumer> registeredUsers = null;
     private static List<Publisher> registeredPublishers = null;
     private static HashMap<String, String> brokerHashtags;
+    private static ServerSocket serverSocket;
 
     public static void main(String[] args) {
         try {
@@ -36,34 +40,43 @@ public class BrokerImpl implements Broker{
 
         //brokers.add(this);
 
-        ServerSocket serverSocket = null;
         Socket connectionSocket = null;
 
         try {
             serverSocket = new ServerSocket(port);
+
+            ID = serverSocket.getLocalSocketAddress().toString();
+            int brokerHash = calculateKeys(ID);
+
+            while(true) {
+                connectionSocket = serverSocket.accept();
+                new Handler(connectionSocket, current_threads).start();
+                current_threads++;
+            }
         } catch(IOException e) {
             /* Crash the server if IO fails. Something bad has happened. */
             throw new RuntimeException("Could not create ServerSocket ", e);
         }
-
-        ID = serverSocket.getLocalSocketAddress().toString();
-        brokerHash = calculateKeys(ID);
-
-        while(true) {
-            acceptConnection(serverSocket, connectionSocket);
+        finally {
+            try {
+                serverSocket.close();
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
         }
-
     }
 
     @Override
-    public byte[] calculateKeys(String id) {
+    public int calculateKeys(String id) {
 
-        byte[] digest = null;
+        int digest = 0;
         try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] idByteArray = id.getBytes();
-            md.update(idByteArray);
-            digest = md.digest();
+            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+            byte[] bb = sha256.digest(id.getBytes(StandardCharsets.UTF_8));
+            BigInteger bigInteger = new BigInteger(1, bb);
+            digest = bigInteger.intValue();
+
+            return digest;
         }
         catch (NoSuchAlgorithmException nsae) {
             nsae.printStackTrace();
@@ -71,7 +84,6 @@ public class BrokerImpl implements Broker{
         finally {
             return digest;
         }
-
     }
 
     public void acceptConnection(ServerSocket serverSocket, Socket socket) {
@@ -83,13 +95,7 @@ public class BrokerImpl implements Broker{
         catch (IOException e) {
             e.printStackTrace();
         }
-        finally {
-            try {
-                serverSocket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+
     }
 
     @Override
@@ -141,13 +147,8 @@ public class BrokerImpl implements Broker{
         return requestSocket;
     }
 
-    public void disconnect(Socket s) {
-        try {
-            s.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    };
+    public void disconnect() {}
+
     @Override
     public void updateNodes() {
 
@@ -156,10 +157,11 @@ public class BrokerImpl implements Broker{
     /** A Thread subclass to handle one client conversation */
     class Handler extends Thread {
 
-        final Socket socket;
+        Socket socket;
         int threadNumber;
         ObjectInputStream objectInputStream;
         ObjectOutputStream objectOutputStream;
+        DataInputStream dataInputStream;
 
         /** Construct a Handler */
         Handler(Socket s, int current_thread) {
@@ -174,25 +176,75 @@ public class BrokerImpl implements Broker{
             }
         }
 
+
         public void run() {
-            while (true) {
+
                 try {
-                    objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
-                    objectInputStream = new ObjectInputStream(socket.getInputStream());
 
-                    int id = objectInputStream.readInt();
+                    while(true) {
 
-                    //if (id == 1)
-                    // If-else statements and calling of specific acceptConnection.
+                        int id = (int) objectInputStream.readObject();
 
+                        // If-else statements and calling of specific acceptConnection.
+                        if (id == 0) {
+                            System.out.println("I got 0!");
+                            objectInputStream.close();
+                            objectOutputStream.close();
+                            socket.close();
+                            break;
+                        }
+                        else if (id == 1) {
+                            handle_push();
+                        }
+                        else {
+                            break;
+                        }
+                    }
+                } catch (IOException | ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
+        }
 
+        public void handle_push() {
+            try {
+                byte[] chunk;
+                ArrayList<byte[]> chunks = new ArrayList<byte[]>();
+
+                int size = (int) objectInputStream.readObject();
+                System.out.println("Size of the Arraylist is: " + size);
+
+                for (int i = 0;i < size;i++){
+                    chunk = new byte[4096];
+                    chunk = objectInputStream.readAllBytes();
+                    chunks.add(chunk);
+                    System.out.println(this.socket.getInetAddress().getHostAddress() + ">" + chunk);
+                }
+
+                System.out.println("My Arraylist size: " + chunks.size());
+
+                try {
+                    File nf = new File("C:/Users/miked/Desktop/test.mp4");
+                    for (byte[] ar : chunks) {
+                        FileOutputStream fw = new FileOutputStream(nf, true);
+                        try {
+                            fw.write(ar);
+                        } finally {
+                            fw.close();
+                        }
+                    }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                finally {
-                    disconnect(socket);
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    objectInputStream.close();
+                    objectOutputStream.close();
+                    socket.close();
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
                 }
-
             }
         }
 
