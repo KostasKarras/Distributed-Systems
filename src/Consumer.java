@@ -4,6 +4,6 @@ interface Consumer extends Node{
 
     public void disconnect(Broker broker, String str);
 
-    public void playData(String str, Value video);
+    public void playData(String str, VideoFile video);
 
 }

@@ -177,7 +177,7 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
     @Override
-    public void playData(String str, Value video) {
+    public void playData(String str, VideoFile video) {
 
     }
 }
