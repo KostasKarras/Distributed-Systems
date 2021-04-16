@@ -9,7 +9,8 @@ public class AppNodeImpl extends Thread implements Publisher, Consumer{
     @Override
     public void push(String hashtags, Value video) {
         this.start();
-        addHashTag(hashtags, video);
+        video.addAssociatedHashTags(hashtags);
+        this.addHashTag(hashtags);
     }
 
     Value value;
@@ -129,15 +130,15 @@ public class AppNodeImpl extends Thread implements Publisher, Consumer{
     }
 
     //Hashtags for which the publisher is responsible
-    ArrayList<String> associatedHashtags = null;
+    ArrayList<String> hashtags = new ArrayList<String>();
     @Override
-    public void addHashTag(String hashtag, Value video) {
-        video.addHashTag(hashtag);
+    public void addHashTag(String hashtag) {
+        hashtags.add(hashtag);
     }
 
     @Override
     public void removeHashTag(String hashtag) {
-        this.associatedHashtags.remove(hashtag);
+        hashtags.remove(hashtag);
     }
 
     @Override
