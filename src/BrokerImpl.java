@@ -1,23 +1,18 @@
 import java.io.IOException;
+import java.math.BigInteger;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class BrokerImpl extends Thread implements Broker{
 
-    public static int ID;
-    public static ArrayList<String> brokerHashtags;
-    public static byte[] brokerHash;
-
-    public static final int NUM_PUBLISHER_THREADS = 5;
-    public static final int NUM_CONSUMER_THREADS = 5;
-    public static final int NUM_THREADS = NUM_PUBLISHER_THREADS + NUM_CONSUMER_THREADS;
-    public static int current_threads = 0;
+    public HashMap<String, Integer> brokersHashCodes = new HashMap<String, Integer>();
 
     ServerSocket serverSocket;
     Socket connectionSocket = null;
@@ -26,6 +21,10 @@ public class BrokerImpl extends Thread implements Broker{
         BrokerImpl broker1 = new BrokerImpl();
         BrokerImpl broker2 = new BrokerImpl();
         BrokerImpl broker3 = new BrokerImpl();
+        //setName is the Threads.setName() method
+        broker1.setName("Broker1");
+        broker2.setName("Broker2");
+        broker3.setName("Broker3");
         brokers.add(broker1);
         brokers.add(broker2);
         brokers.add(broker3);
@@ -33,11 +32,16 @@ public class BrokerImpl extends Thread implements Broker{
         broker2.start();
         broker3.start();
     }
-
-    static int port = 4321;
+    static int port = 3321;
     public void run() {
         try {
-            serverSocket = new ServerSocket(port++, 6);
+            serverSocket = new ServerSocket(port+=1234, 6);
+            String broker_hash = serverSocket.getInetAddress().getLocalHost().getHostAddress();
+            String localport = String.valueOf(serverSocket.getLocalPort());
+            broker_hash += ":" + localport;
+            int brokersHash = calculateKeys(broker_hash);
+            brokersHashCodes.put(this.getName(), brokersHash);
+            System.out.println(brokersHashCodes);
 
             while (true) {
                 connectionSocket = serverSocket.accept();
@@ -65,16 +69,16 @@ public class BrokerImpl extends Thread implements Broker{
 
     //DONE!
     @Override
-    public byte[] calculateKeys(int id) {
+    public int calculateKeys(String id) {
 
-        byte[] digest = null;
+        int digest = 0;
         try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            ByteBuffer bb = ByteBuffer.allocate(4);
-            bb.putInt(id);
-            byte[] idByteArray = bb.array();
-            md.update(idByteArray);
-            digest = md.digest();
+            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+            byte[] bb = sha256.digest(id.getBytes(StandardCharsets.UTF_8));
+            BigInteger bigInteger = new BigInteger(1, bb);
+            digest = bigInteger.intValue();
+
+            return digest;
         }
         catch (NoSuchAlgorithmException nsae) {
             nsae.printStackTrace();
@@ -82,7 +86,6 @@ public class BrokerImpl extends Thread implements Broker{
         finally {
             return digest;
         }
-
     }
 
     //DONE!
@@ -143,15 +146,5 @@ public class BrokerImpl extends Thread implements Broker{
     @Override
     public void updateNodes() {
 
-    }
-
-    //DONE!
-    public int getIPSumValue(String ip) {
-        String parts[] = ip.split("\\.");
-        int ip_sum = 0;
-        for (int part = 0; part<4; part++) {
-            ip_sum += Integer.parseInt(parts[part]);
-        }
-        return ip_sum;
     }
 }
