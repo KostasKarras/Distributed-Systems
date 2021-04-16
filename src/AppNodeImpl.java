@@ -47,8 +47,19 @@ public class AppNodeImpl extends Thread implements Publisher, Consumer{
         ObjectInputStream objectInputStream = null;
         String message;
 
+/*
+-----------------------------------
+PORTS TO CONNECT THE REQUEST SOCKET
+-----------------------------------
+----------
+PORT: 7023
+PORT: 5789
+PORT: 4555
+----------
+*/
+
         try {
-            requestSocket = new Socket(InetAddress.getByName("127.0.0.1"), 4323);
+            requestSocket = new Socket(InetAddress.getByName("127.0.0.1"), 4555);
 
             objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
             objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
