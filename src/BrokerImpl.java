@@ -8,7 +8,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BrokerImpl implements Broker{
+public class BrokerImpl extends Thread implements Broker{
 
     public static int ID;
     public static ArrayList<String> brokerHashtags;
@@ -22,16 +22,16 @@ public class BrokerImpl implements Broker{
     ServerSocket serverSocket;
     Socket connectionSocket = null;
 
-    //THE LAST TWO SERVERS DON'T RUN!!!
     public static void main(String[] args) {
-        new BrokerImpl().openServer(4321);
-        new BrokerImpl().openServer(4421);
-        new BrokerImpl().openServer(4521);
+        new BrokerImpl().start();
+        new BrokerImpl().start();
+        new BrokerImpl().start();
     }
 
-    void openServer(int number) {
+    static int port = 4321;
+    public void run() {
         try {
-            serverSocket = new ServerSocket(number, 6);
+            serverSocket = new ServerSocket(port++, 6);
 
             while (true) {
                 connectionSocket = serverSocket.accept();
