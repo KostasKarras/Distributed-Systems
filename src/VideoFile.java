@@ -1,12 +1,16 @@
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 
 public class VideoFile {
 
+    private final ArrayList<String> associatedHashtags;
     private String filepath;
-    public VideoFile(String filepath){
+    //private ArrayList<String> associatedHashtags;
+    public VideoFile(String filepath, ArrayList<String> associatedHashtags) {
         this.filepath = filepath;
+        this.associatedHashtags = associatedHashtags;
     }
 
     public byte[] getVideoFileChunk() {
@@ -26,5 +30,13 @@ public class VideoFile {
 
     public String getFilepath() {
         return this.filepath;
+    }
+
+    public ArrayList<String> getAssociatedHashtags(){
+        return this.associatedHashtags;
+    }
+
+    public void addHashTag(String hashtag){
+        this.associatedHashtags.add(hashtag);
     }
 }
