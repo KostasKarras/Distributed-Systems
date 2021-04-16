@@ -5,7 +5,7 @@ import java.util.ArrayList;
 
 public class VideoFile {
 
-    private final ArrayList<String> associatedHashtags;
+    private ArrayList<String> associatedHashtags;
     private String filepath;
     //private ArrayList<String> associatedHashtags;
     public VideoFile(String filepath, ArrayList<String> associatedHashtags) {
@@ -36,7 +36,7 @@ public class VideoFile {
         return this.associatedHashtags;
     }
 
-    public void addHashTag(String hashtag){
+    public void addAssociatedHashTags(String hashtag){
         this.associatedHashtags.add(hashtag);
     }
 }
