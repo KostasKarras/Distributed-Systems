@@ -5,7 +5,7 @@ interface Publisher extends Node{
 
     static final ChannelName channelName = null;
 
-    public void addHashTag(String hashtag, Value video);
+    public void addHashTag(String hashtag);
 
     public void removeHashTag(String hashtag);
 
