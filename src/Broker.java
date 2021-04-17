@@ -1,21 +1,21 @@
 import java.util.List;
 
-interface Broker extends Node{
+public interface Broker extends Node{
 
-    static final List<Consumer> registerUsers = null;
-    static final List<Publisher> registerPublishers = null;
+    static List<Consumer> registeredUsers = null;
+    static List<Publisher> registeredPublishers = null;
 
-    public void calculateKeys();
+    public int calculateKeys(String ID);
 
     public Publisher acceptConnection(Publisher publisher);
 
     public Consumer acceptConnection(Consumer consumer);
 
-    public void notifyPublisher(String );
+    public void notifyPublisher(String topic);
 
     public void notifyBrokersOnChanges();
 
-    public void pull(String channel_or_hashtag);
+    public void pull(String topic);
 
-    public void filterConsumers(String );
+    public void filterConsumers(String user_id);
 }

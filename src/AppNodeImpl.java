@@ -1,122 +1,144 @@
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.io.*;
+import java.net.*;
 
-public class AppNodeImpl implements Publisher, Consumer{
-    @Override
+public class AppNodeImpl implements Publisher, Consumer {
+
+    /** Main Method */
+    public static void main(String[] args) {
+        AppNodeImpl Node = new AppNodeImpl();
+    }
+
     public void addHashTag(String hashtag) {
 
     }
 
-    @Override
     public void removeHashTag(String hashtag) {
 
     }
 
-    @Override
-    public List<Broker> getBrokerList() {
-        return null;
-    }
-
-    @Override
     public Broker hashTopic(String hashtopic) {
         return null;
     }
 
-    @Override
-    public void push(String hashtags, Value video) {
+    public void push(String hashtags, VideoFile video) {
+        ArrayList<byte[]> chunks = generateChunks(video);
+        Socket requestSocket = null;
+        ObjectOutputStream objectOutputStream = null;
+        ObjectInputStream objectInputStream = null;
+        String message;
 
+        try {
+            requestSocket = new Socket(InetAddress.getByName("127.0.0.1"), 4321);
+
+            objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
+            objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
+
+            try {
+                message = (String) objectInputStream.readObject();
+                System.out.println("Server>" + message);
+
+                objectOutputStream.writeObject("Hi!");
+                objectOutputStream.flush();
+
+                while (!chunks.isEmpty()) {
+                    System.out.println("Size of ArrayList: " + chunks.size());
+                    byte[] clientToServer = chunks.remove(0);
+                    objectOutputStream.writeObject(clientToServer);
+                    objectOutputStream.flush();
+                }
+
+                objectOutputStream.writeObject("Just Testing..");
+                objectOutputStream.flush();
+
+                objectOutputStream.writeObject("Socket lab testing");
+                objectOutputStream.flush();
+
+                objectOutputStream.writeObject("bye");
+                objectOutputStream.flush();
+
+            } catch (ClassNotFoundException classNot) {
+                System.err.println("data received in unknown format");
+            }
+        } catch (UnknownHostException unknownHost) {
+            System.err.println("You are trying to connect to an unknown host!");
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        } finally {
+            try {
+                objectInputStream.close();
+                objectOutputStream.close();
+                requestSocket.close();
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
+        }
     }
 
-    @Override
     public void notifyFailure(Broker broker) {
 
     }
 
-    @Override
     public void notifyBrokersForHashTags(String hashtag) {
 
     }
 
-    @Override
-    public ArrayList<byte[]> generateChunks(String filepath) {
-        ArrayList<byte[]> my_arraylist = new ArrayList<byte []>();
+    public ArrayList <byte[]> generateChunks(VideoFile video) {
+        final int CHUNK_SIZE = 4096;
+        ArrayList <byte[]> chunkArrayList = new ArrayList <> ();
+        int byteFilePointer = 0;
+        byte[] videoBuffer = video.getVideoFileChunk();
 
-        VideoFile vf = new VideoFile(filepath);
-
-        boolean flag = true;
-        int i = 0;
-        byte[] inputBuffer = vf.getVideoFileChunk();
-
-        while (i < inputBuffer.length) {
-            byte[] buffer = new byte[4096];
-            for (int j = 0;j < buffer.length;j++) {
-                if (i < inputBuffer.length)
-                    buffer[j] = inputBuffer[i++];
+        while (byteFilePointer < videoBuffer.length) {
+            byte[] chunk = new byte[CHUNK_SIZE];
+            for (int j = 0; j < chunk.length; j++) {
+                if (byteFilePointer < videoBuffer.length)
+                    chunk[j] = videoBuffer[byteFilePointer++];
             }
-            my_arraylist.add(buffer);
+            chunkArrayList.add(chunk);
         }
-        return my_arraylist;
+        return chunkArrayList;
     }
 
-    @Override
-    public void init(int i) {
+    public void register(Broker broker, String str) {
 
     }
 
-    @Override
+    public void playData(String str, VideoFile video) {
+
+    }
+
+    public void initialize(int i) {
+
+    }
+
     public List<Broker> getBrokers() {
         return null;
     }
 
-    @Override
-    public void connect() {
+    public Socket connect() {
+        Socket requestSocket = null;
 
-    }
-
-    @Override
-    public void disconnect() {
-
-    }
-
-    @Override
-    public void updateNodes() {
-
-    }
-
-    public static void main(String[] args) {
-        Publisher p = new AppNodeImpl();
-        //generateChunks argument is the filepath
-        ArrayList<byte[]> inputArraylist = p.generateChunks("C:\\Users\\Kostas\\IdeaProjects\\Distributed Systems\\src\\DIMAKHS.mp4");
         try {
-            File nf = new File("C:/Users/Kostas/Desktop/test.mp4");
-            for (byte[] ar : inputArraylist) {
-                FileOutputStream fw = new FileOutputStream(nf, true);
-                try {
-                    fw.write(ar);
-                } finally {
-                    fw.close();
-                }
-            }
+            requestSocket = new Socket("127.0.0.1", 4321);
+        } catch (UnknownHostException unknownHost) {
+            System.err.println("You are trying to connect to an unknown host.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return requestSocket;
+    }
+
+    public void disconnect(Socket s) {
+        try {
+            s.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    @Override
-    public void register(Broker broker, String str) {
-
-    }
-
-    @Override
-    public void disconnect(Broker broker, String str) {
-
-    }
-
-    @Override
-    public void playData(String str, Value video) {
+    public void updateNodes() {
 
     }
 }

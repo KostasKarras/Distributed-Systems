@@ -1,16 +1,17 @@
 import java.util.List;
+import java.net.Socket;
 
-interface Node {
+public interface Node {
 
-    static final List<Broker> brokers = null;
+    static List<Broker> brokers = null;
 
-    public void init(int i);
+    public void initialize(int port);
 
-    public List<Broker> getBrokers();
+    public List <Broker> getBrokers();
 
-    public void connect();
+    public Socket connect();
 
-    public void disconnect();
+    public void disconnect(Socket s);
 
     public void updateNodes();
 

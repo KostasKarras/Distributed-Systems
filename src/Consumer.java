@@ -1,9 +1,7 @@
-interface Consumer extends Node{
+public interface Consumer extends Node {
 
-    public void register(Broker broker, String );
+    public void register(Broker broker, String id);
 
-    public void disconnect(Broker broker, String );
-
-    public void playData(String , Value video);
+    public void playData(String name, VideoFile video);
 
 }

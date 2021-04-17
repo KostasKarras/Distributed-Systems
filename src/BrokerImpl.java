@@ -1,3 +1,8 @@
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.List;
 import java.net.*;
 import java.io.*;
@@ -6,11 +11,11 @@ public class BrokerImpl implements Broker {
 
     /** Class Variables */
     private static String ID;
-    private static byte[] brokerHash;
+    private static int brokerHash;
     private static int current_threads = 1;
-    private static List<Broker> brokers = null;
-    private static List<Consumer> registeredUsers = null;
-    private static List<Publisher> registeredPublishers = null;
+    private static List<Broker> brokers;
+    private static List<Consumer> registeredUsers;
+    private static List<Publisher> registeredPublishers;
 
     /** Main method, to start the servers */
     public static void main(String[] args) {
@@ -19,8 +24,6 @@ public class BrokerImpl implements Broker {
 
     /** Initializer Method */
     public void initialize(int port) {
-
-        brokers.add(this);
 
         ServerSocket serverSocket;
         Socket connectionSocket;
@@ -33,7 +36,8 @@ public class BrokerImpl implements Broker {
         }
 
         String ip_address = serverSocket.getInetAddress().toString();
-        ID = String.format("Broker_%s:%d", ip_address, port);
+        String serverSocketAddress = serverSocket.getLocalSocketAddress().toString();
+        ID = String.format("Broker_%s", serverSocketAddress);
         brokerHash = calculateKeys(ID);
 
         while (true) {
@@ -71,12 +75,13 @@ public class BrokerImpl implements Broker {
         public void run() {
             while (true) {
                 try {
-                    objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
-                    objectInputStream = new ObjectInputStream(socket.getInputStream());
 
                     int id = objectInputStream.readInt();
 
                     // If-else statements and calling of specific acceptConnection.
+                    if (id == 1) {
+                        handle_push();
+                    }
 
                     socket.close();
                 } catch (IOException e) {
@@ -84,10 +89,76 @@ public class BrokerImpl implements Broker {
                 }
             }
         }
+
+        public void handle_push() {
+            try {
+
+                String message;
+                message = (String) objectInputStream.readObject();
+                if(message.equals("I want to push a new video!"))
+                    System.out.println(socket.getInetAddress().getHostAddress() + ">New Client connected.");
+
+                objectOutputStream.writeObject("Video is pushed...");
+                objectOutputStream.flush();
+
+                byte[] chunk;
+                ArrayList<byte[]> chunks = new ArrayList<byte[]>();
+
+                int size = (int) objectInputStream.readObject();
+                System.out.println("Size of the Arraylist is: " + size);
+
+                for (int i = 0;i < size;i++){
+                    chunk = new byte[4096];
+                    chunk = objectInputStream.readAllBytes();
+                    chunks.add(chunk);
+                    System.out.println(this.socket.getInetAddress().getHostAddress() + ">" + chunk.toString());
+                }
+
+                System.out.println("My Arraylist size: " + chunks.size());
+
+                try {
+                    File nf = new File("C:/Users/miked/Desktop/test.mp4");
+                    for (byte[] ar : chunks) {
+                        FileOutputStream fw = new FileOutputStream(nf, true);
+                        try {
+                            fw.write(ar);
+                        } finally {
+                            fw.close();
+                        }
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    objectInputStream.close();
+                    objectOutputStream.close();
+                    socket.close();
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                }
+            }
+        }
     }
 
-    public byte[] calculateKeys(String ID) {
-        return null;
+    public int calculateKeys(String ID) {
+        int digest = 0;
+        try {
+            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+            byte[] bb = sha256.digest(ID.getBytes(StandardCharsets.UTF_8));
+            BigInteger bigInteger = new BigInteger(1, bb);
+            digest = bigInteger.intValue();
+
+            return digest;
+        }
+        catch (NoSuchAlgorithmException nsae) {
+            nsae.printStackTrace();
+        }
+        finally {
+            return digest;
+        }
     }
 
     public Publisher acceptConnection(Publisher publisher) {
