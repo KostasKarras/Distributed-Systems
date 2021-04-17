@@ -1,7 +1,5 @@
 import java.io.*;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -113,6 +111,7 @@ public class AppNodeImpl implements Publisher, Consumer{
     public void initialize(int port) {
 
         channel = new ChannelName("user");
+        handle_multicast();
 
         ArrayList<String> videoHashtags = new ArrayList<>();
         videoHashtags.add("First File");
@@ -121,6 +120,42 @@ public class AppNodeImpl implements Publisher, Consumer{
         push("#TIPOTES", vf);
 
     }
+
+    //THIS FUNCTION WAS USED FOR TESTING MULTICAST SOCKET
+    public void handle_multicast() {
+
+        try {
+
+            MulticastSocket multicastSocket;
+
+            //INITIALIZE MULTICAST SOCKET
+            int multicastPort = 5000;
+            InetAddress AppNodeIP = InetAddress.getByName("192.168.2.51");
+            SocketAddress multicastSocketAddress = new InetSocketAddress(AppNodeIP, multicastPort);
+            multicastSocket = new MulticastSocket(multicastSocketAddress);
+
+            //JOIN GROUP ADDRESS
+            InetAddress group_address = InetAddress.getByName("228.5.6.10");
+            multicastSocket.joinGroup(group_address);
+
+            //SEND PACKET
+            DatagramPacket send_packet = new DatagramPacket("Good Morning".getBytes(), "Good Morning".length(), group_address, multicastPort);
+            multicastSocket.send(send_packet);
+
+            //CLOSE MULTICAST SOCKET
+            multicastSocket.leaveGroup(group_address);
+            multicastSocket.close();
+
+        }
+        catch (UnknownHostException uhe) {
+            uhe.printStackTrace();
+        }
+        catch (IOException ioe) {
+            ioe.printStackTrace();
+        }
+
+    }
+    //
 
     @Override
     public List<Broker> getBrokers() {

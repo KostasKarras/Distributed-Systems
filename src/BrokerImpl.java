@@ -1,10 +1,10 @@
+import jdk.swing.interop.SwingInterOpUtils;
+
+import javax.imageio.plugins.tiff.BaselineTIFFTagSet;
 import javax.xml.crypto.Data;
 import java.io.*;
 import java.math.BigInteger;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -25,6 +25,10 @@ public class BrokerImpl implements Broker{
     private static HashMap<String, String> brokerHashtags;
     private static ServerSocket serverSocket;
 
+    // CHANGE : New HashMap
+    private static HashMap<Integer, Broker> brokerHashes = new HashMap<>();
+    // END OF CHANGE
+
     public static void main(String[] args) {
         new BrokerImpl().initialize(4321);
     }
@@ -41,9 +45,17 @@ public class BrokerImpl implements Broker{
         try {
             serverSocket = new ServerSocket(port);
 
+            //CHANGE : HANDLE MULTICAST
+            new Multicast_Handler().start();
+            //
+
             String serverSocketAddress = serverSocket.getLocalSocketAddress().toString();
             ID = String.format("Broker_%s", serverSocketAddress);
             int brokerHash = calculateKeys(ID);
+
+            //CHANGE : PASS brokerHash to brokerHashes
+            brokerHashes.put(brokerHash, this);
+            //END OF CHANGE
 
             while(true) {
                 connectionSocket = serverSocket.accept();
@@ -222,4 +234,56 @@ public class BrokerImpl implements Broker{
 
     }
 
+    /** A Thread subclass to handle broker communication */
+    class Multicast_Handler extends Thread {
+
+        public MulticastSocket multicastSocket;
+        public DatagramPacket packet_receiver;
+
+        Multicast_Handler() {
+
+            try {
+
+                //INITIALIZE MULTICAST SOCKET
+                int multicastPort = 5000;
+                InetAddress brokerIP = InetAddress.getByName("192.168.2.51");
+                SocketAddress multicastSocketAddress = new InetSocketAddress(brokerIP, multicastPort);
+                multicastSocket = new MulticastSocket(multicastSocketAddress);
+
+                //JOIN GROUP ADDRESS
+                InetAddress group_address = InetAddress.getByName("228.5.6.10");
+                multicastSocket.joinGroup(group_address);
+
+                //INITIALIZE DATAGRAM PACKET
+                byte buf[] = new byte[1000];
+                packet_receiver = new DatagramPacket(buf, buf.length);
+
+            }
+            catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
+        }
+
+        @Override
+        public void run() {
+
+            //RECEIVE PACKET
+            try {
+
+                while (true) {
+                    multicastSocket.receive(packet_receiver);
+                    String message = new String(packet_receiver.getData(), packet_receiver.getOffset(), packet_receiver.getLength());
+                    System.out.println(message);
+
+                    if (message == "break") {
+                        break;
+                    }
+
+                }
+            }
+            catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
+        }
+    }
 }
