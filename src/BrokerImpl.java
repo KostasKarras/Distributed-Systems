@@ -1,4 +1,4 @@
-import java.io.IOException;
+import java.io.*;
 import java.math.BigInteger;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -9,50 +9,56 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-public class BrokerImpl extends Thread implements Broker{
+public class BrokerImpl implements Broker{
 
-    public HashMap<String, Integer> brokersHashCodes = new HashMap<String, Integer>();
-
-    ServerSocket serverSocket;
-    Socket connectionSocket = null;
+    /** Class Variables */
+    private static String ID;
+    private static int brokerHash;
+    private static int current_threads = 1;
+    private static List<Broker> brokers = null;
+    private static List<Consumer> registeredUsers = null;
+    private static List<Publisher> registeredPublishers = null;
+    private static HashMap<String, String> brokerHashtags;
+    private static ServerSocket serverSocket;
 
     public static void main(String[] args) {
-        BrokerImpl broker1 = new BrokerImpl();
-        BrokerImpl broker2 = new BrokerImpl();
-        BrokerImpl broker3 = new BrokerImpl();
-        //setName is the Threads.setName() method
-        broker1.setName("Broker1");
-        broker2.setName("Broker2");
-        broker3.setName("Broker3");
-        brokers.add(broker1);
-        brokers.add(broker2);
-        brokers.add(broker3);
-        broker1.start();
-        broker2.start();
-        broker3.start();
-    }
-    static int port = 3321;
-    public void run() {
+        Broker broker1 = new BrokerImpl();
         try {
-            serverSocket = new ServerSocket(port+=1234, 6);
-            String broker_hash = serverSocket.getInetAddress().getLocalHost().getHostAddress();
-            String localport = String.valueOf(serverSocket.getLocalPort());
-            broker_hash += ":" + localport;
-            int brokersHash = calculateKeys(broker_hash);
-            brokersHashCodes.put(this.getName(), brokersHash);
-            System.out.println(brokersHashCodes);
+            broker1.initialize(4321);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+    }
 
-            while (true) {
+    @Override
+    public void initialize(int port)  {
+
+        brokerHashtags = new HashMap<>();
+
+        //brokers.add(this);
+
+        Socket connectionSocket = null;
+
+        try {
+            serverSocket = new ServerSocket(port);
+
+            String serverSocketAddress = serverSocket.getLocalSocketAddress().toString();
+            ID = String.format("Broker_%s", serverSocketAddress);
+            int brokerHash = calculateKeys(ID);
+            //System.out.println("Hashed:" + brokerHash);
+
+            while(true) {
                 connectionSocket = serverSocket.accept();
-
-                Thread handler = new Handler(connectionSocket);
-                handler.start();
-
+                new Handler(connectionSocket, current_threads).start();
+                current_threads++;
             }
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
-        } finally {
+        } catch(IOException e) {
+            /* Crash the server if IO fails. Something bad has happened. */
+            throw new RuntimeException("Could not create ServerSocket ", e);
+        }
+        finally {
             try {
                 serverSocket.close();
             } catch (IOException ioException) {
@@ -61,13 +67,6 @@ public class BrokerImpl extends Thread implements Broker{
         }
     }
 
-    //DONE!
-    @Override
-    public void init() throws UnknownHostException {
-
-    }
-
-    //DONE!
     @Override
     public int calculateKeys(String id) {
 
@@ -88,63 +87,184 @@ public class BrokerImpl extends Thread implements Broker{
         }
     }
 
-    //DONE!
     @Override
     public Publisher acceptConnection(Publisher publisher) {
         return null;
     }
 
-    //DONE!
     @Override
     public Consumer acceptConnection(Consumer consumer) {
         return null;
     }
 
-    //PENDING!
     @Override
     public void notifyPublisher(String str) {
 
     }
 
-    //PENDING!
     @Override
     public void notifyBrokersOnChanges() {
 
     }
 
-    //PENDING!
     @Override
     public void pull(String channel_or_hashtag) {
 
     }
 
-    //PENDING!
     @Override
     public void filterConsumers() {
 
     }
 
-    //DONE!
+
     @Override
     public List<Broker> getBrokers() {
         return brokers;
     }
 
-    //DONE!
-    @Override
-    public Socket connect() {
-        return null;
+    public void connect() {
+        //Pass
     }
 
-    //DONE!
-    @Override
     public void disconnect() {
-
+        //Pass
     }
 
-    //PENDING!
     @Override
     public void updateNodes() {
 
+    }
+
+    /**KOSTAS*/
+    /** A Thread subclass to handle one client conversation */
+    static class Handler extends Thread {
+
+        Socket socket;
+        int threadNumber;
+        ObjectInputStream objectInputStream;
+        ObjectOutputStream objectOutputStream;
+        static HashMap<String, ArrayList<byte[]>> VideoFileChunks = new HashMap<String, ArrayList<byte[]>>();
+        static ArrayList<byte[]> VideoFile = new ArrayList<byte[]>();
+        /**
+         * Construct a Handler
+         */
+        Handler(Socket s, int current_thread) {
+            socket = s;
+            threadNumber = current_thread;
+            setName("Thread " + threadNumber);
+            try {
+                objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
+                objectInputStream = new ObjectInputStream(socket.getInputStream());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        public void run() {
+
+            try {
+                int id = (int) objectInputStream.readObject();
+
+                // If-else statements and calling of specific acceptConnection.
+                if (id == 1) {
+                    handle_push();
+                }
+                else if (id == 2) {
+                    handle_pull();
+                }
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+
+        public void handle_push() {
+            try {
+
+                String message;
+                message = (String) objectInputStream.readObject();
+                if (message.equals("I want to push a new video!"))
+                    System.out.println(socket.getInetAddress().getHostAddress() + ">New Publisher connected.");
+
+                objectOutputStream.writeObject("Video is pushing from Publisher to Sever...");
+                objectOutputStream.flush();
+
+                byte[] chunk;
+                ArrayList<byte[]> chunks = new ArrayList<byte[]>();
+
+                int size = (int) objectInputStream.readObject();
+
+                String hashtags = (String) objectInputStream.readObject();
+
+                for (int i = 0; i < size; i++) {
+                    chunk = new byte[4096];
+                    chunk = objectInputStream.readAllBytes();
+                    chunks.add(chunk);
+                }
+
+                VideoFile.addAll(chunks);
+                VideoFileChunks.put(hashtags, VideoFile);
+
+                System.out.println(socket.getInetAddress().getHostAddress() + ">Video received Successfully!");
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    objectInputStream.close();
+                    objectOutputStream.close();
+                    socket.close();
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                }
+            }
+        }
+
+        public void handle_pull() {
+            try {
+
+                String message;
+                message = (String) objectInputStream.readObject();
+                if (message.equals("I want to pull a video!"))
+                    System.out.println(socket.getInetAddress().getHostAddress() + ">New Consumer connected.");
+
+                objectOutputStream.writeObject(VideoFileChunks.size());
+                objectOutputStream.flush();
+
+                String topic = (String) objectInputStream.readObject();
+
+                String videoExists = "false";
+                if (VideoFileChunks.containsKey(topic)) {
+                    videoExists = "true";
+                    objectOutputStream.writeObject("Video has already pulled from Publisher.");
+                    objectOutputStream.flush();
+                    objectOutputStream.writeObject("Now video is pushing from Server to Consumer...");
+                    objectOutputStream.flush();
+                } else {
+                    objectOutputStream.writeObject("Video doesn't exists.");
+                    objectOutputStream.flush();
+                    objectOutputStream.writeObject("Try again in the future.");
+                    objectOutputStream.flush();
+                }
+                if (videoExists.equals("true")) {
+                    for (Map.Entry<String, ArrayList<byte[]>> item : VideoFileChunks.entrySet()) {
+                        byte[] clientToServer = item.getValue().remove(0);
+                        objectOutputStream.write(clientToServer);
+                        objectOutputStream.flush();
+                    }
+                }
+                objectOutputStream.writeObject(videoExists);
+                objectOutputStream.flush();
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            }finally {
+                try {
+                    objectInputStream.close();
+                    objectOutputStream.close();
+                    socket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 }
