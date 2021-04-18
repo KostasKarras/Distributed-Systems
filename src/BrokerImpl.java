@@ -145,7 +145,7 @@ public class BrokerImpl implements Broker{
         ObjectInputStream objectInputStream;
         ObjectOutputStream objectOutputStream;
         static HashMap<String, ArrayList<byte[]>> VideoFileChunks = new HashMap<String, ArrayList<byte[]>>();
-        static ArrayList<byte[]> VideoFile = new ArrayList<byte[]>();
+        ArrayList<byte[]> VideoFile = new ArrayList<byte[]>();
         /**
          * Construct a Handler
          */
