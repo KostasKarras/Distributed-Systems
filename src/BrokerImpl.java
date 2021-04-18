@@ -41,6 +41,10 @@ public class BrokerImpl implements Broker{
         try {
             serverSocket = new ServerSocket(port);
 
+            //HANDLE MULTICAST
+            new Multicast_Handler().start();
+            //
+
             String serverSocketAddress = serverSocket.getLocalSocketAddress().toString();
             ID = String.format("Broker_%s", serverSocketAddress);
             int brokerHash = calculateKeys(ID);
@@ -156,11 +160,32 @@ public class BrokerImpl implements Broker{
         public void run() {
 
                 try {
-                        int id = (int) objectInputStream.readObject();
-
+                        int option = (int) objectInputStream.readObject();;
                         // If-else statements and calling of specific acceptConnection.
-                        if (id == 1) {
-                            handle_push();
+
+                        /** Node Requests Handle */
+                        if (option == 0) {  // Get Brokers
+
+                        }
+
+                        /** Consumer - User Requests Handle */
+                        else if (option == 1) {  // Register User
+                            
+                        } else if (option == 2) {  // Get Topic Video List*
+
+                        } else if (option == 3) {  // Play Data*
+
+                        }
+                        
+                        /** Publisher Requests Handle */
+                        else if (option == 4) {  // Hash Topic?
+
+                        } else if (option == 5) {  // Push?
+
+                        } else if (option == 6) {  // Notify Failure?
+
+                        } else if (option == 7) {  // Notify Brokers for Hashtags
+
                         }
 
                 } catch (IOException | ClassNotFoundException e) {
@@ -218,8 +243,59 @@ public class BrokerImpl implements Broker{
                     ioException.printStackTrace();
                 }
             }
-        }
-
+        }   
     }
 
+    /** A Thread subclass to handle broker communication */
+    class Multicast_Handler extends Thread {
+
+        public MulticastSocket multicastSocket;
+        public DatagramPacket packet_receiver;
+
+        Multicast_Handler() {
+
+            try {
+
+                //INITIALIZE MULTICAST SOCKET
+                int multicastPort = 5000;
+                InetAddress brokerIP = InetAddress.getByName("192.168.2.51");
+                SocketAddress multicastSocketAddress = new InetSocketAddress(brokerIP, multicastPort);
+                multicastSocket = new MulticastSocket(multicastSocketAddress);
+
+                //JOIN GROUP ADDRESS
+                InetAddress group_address = InetAddress.getByName("228.5.6.10");
+                multicastSocket.joinGroup(group_address);
+
+                //INITIALIZE DATAGRAM PACKET
+                byte buf[] = new byte[1000];
+                packet_receiver = new DatagramPacket(buf, buf.length);
+
+            }
+            catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
+        }
+
+        @Override
+        public void run() {
+
+            //RECEIVE PACKET
+            try {
+
+                while (true) {
+                    multicastSocket.receive(packet_receiver);
+                    String message = new String(packet_receiver.getData(), packet_receiver.getOffset(), packet_receiver.getLength());
+                    System.out.println(message);
+
+                    if (message == "break") {
+                        break;
+                    }
+
+                }
+            }
+            catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
+        }
+    }
 }
