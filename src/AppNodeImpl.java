@@ -8,9 +8,36 @@ import java.util.function.ObjIntConsumer;
 public class AppNodeImpl implements Publisher, Consumer{
 
     private static Socket requestSocket;
-    private static ObjectOutputStream objectOutputStream;
-    private static ObjectInputStream objectInputStream;
+    private static ObjectOutputStream objectOutputStream; // MAY DELETE LATER or PASS THEM TO THE CONSUMER HANDLER
+    private static ObjectInputStream objectInputStream;  // SAME
     private static ChannelName channel;
+
+    public static void main(String[] args) {
+        new AppNodeImpl().initialize(4321);
+    }
+
+    @Override
+    public void initialize(int port) {
+        
+
+        channel = new Channel("USER");
+
+        new PublisherHandler().start();
+
+        runUser();
+
+        //THINK FOR TOMMOROW THE IMPLEMENTATION!
+
+        /**
+        channel = new ChannelName("user");
+
+        ArrayList<String> videoHashtags = new ArrayList<>();
+        videoHashtags.add("First File");
+
+        VideoFile vf = new VideoFile("C:\\Users\\miked\\Videos\\Captures\\Numb (Official Video) - Linkin Park - YouTube - Google Chrome 2020-04-03 14-10-06.mp4", videoHashtags);
+        push("#TIPOTES", vf);
+        */
+    }
 
     @Override
     public void addHashTag(String hashtag) {
@@ -35,7 +62,7 @@ public class AppNodeImpl implements Publisher, Consumer{
     @Override
     public void push(String hashtags, VideoFile video) {
 
-        ArrayList<byte[]> chunks = generateChunks(video);//feygei
+        ArrayList<byte[]> chunks = generateChunks(video);
         String message;
 
         connect();
@@ -195,12 +222,6 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     }
 
-    public static void main(String[] args) {
-
-        new AppNodeImpl().initialize(4321);
-
-    }
-
     @Override
     public void register(Broker broker, String str) {
 
@@ -212,7 +233,27 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
     @Override
-    public void playData(String str, Value video) {
+    public void playData(String str, VideoFile video) {
 
+    }
+
+    class RequestHandler extends Thread {
+        
+        RequestHandler() {}
+
+        public void run() {}
+    }
+
+    class ServeRequest extends Thread {
+
+        ServeRequest() {}
+
+        public void run() {
+            //OPTIONS
+        }
+    }
+
+    public void runUser() {
+        //BUILD INTERFACE
     }
 }

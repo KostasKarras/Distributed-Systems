@@ -1,10 +1,10 @@
-import jdk.swing.interop.SwingInterOpUtils;
-
-import javax.imageio.plugins.tiff.BaselineTIFFTagSet;
 import javax.xml.crypto.Data;
 import java.io.*;
 import java.math.BigInteger;
-import java.net.*;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -25,10 +25,6 @@ public class BrokerImpl implements Broker{
     private static HashMap<String, String> brokerHashtags;
     private static ServerSocket serverSocket;
 
-    // CHANGE : New HashMap
-    private static HashMap<Integer, Broker> brokerHashes = new HashMap<>();
-    // END OF CHANGE
-
     public static void main(String[] args) {
         new BrokerImpl().initialize(4321);
     }
@@ -45,17 +41,13 @@ public class BrokerImpl implements Broker{
         try {
             serverSocket = new ServerSocket(port);
 
-            //CHANGE : HANDLE MULTICAST
+            //HANDLE MULTICAST
             new Multicast_Handler().start();
             //
 
             String serverSocketAddress = serverSocket.getLocalSocketAddress().toString();
             ID = String.format("Broker_%s", serverSocketAddress);
             int brokerHash = calculateKeys(ID);
-
-            //CHANGE : PASS brokerHash to brokerHashes
-            brokerHashes.put(brokerHash, this);
-            //END OF CHANGE
 
             while(true) {
                 connectionSocket = serverSocket.accept();
@@ -168,11 +160,32 @@ public class BrokerImpl implements Broker{
         public void run() {
 
                 try {
-                        int id = (int) objectInputStream.readObject();
-
+                        int option = (int) objectInputStream.readObject();;
                         // If-else statements and calling of specific acceptConnection.
-                        if (id == 1) {
-                            handle_push();
+
+                        /** Node Requests Handle */
+                        if (option == 0) {  // Get Brokers
+
+                        }
+
+                        /** Consumer - User Requests Handle */
+                        else if (option == 1) {  // Register User
+                            
+                        } else if (option == 2) {  // Get Topic Video List*
+
+                        } else if (option == 3) {  // Play Data*
+
+                        }
+                        
+                        /** Publisher Requests Handle */
+                        else if (option == 4) {  // Hash Topic?
+
+                        } else if (option == 5) {  // Push?
+
+                        } else if (option == 6) {  // Notify Failure?
+
+                        } else if (option == 7) {  // Notify Brokers for Hashtags
+
                         }
 
                 } catch (IOException | ClassNotFoundException e) {
@@ -230,8 +243,7 @@ public class BrokerImpl implements Broker{
                     ioException.printStackTrace();
                 }
             }
-        }
-
+        }   
     }
 
     /** A Thread subclass to handle broker communication */
