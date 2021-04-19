@@ -1,66 +1,140 @@
+import java.io.*;
 import java.math.BigInteger;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.net.*;
-import java.io.*;
 
-public class BrokerImpl implements Broker {
+public class BrokerImpl implements Broker{
 
     /** Class Variables */
     private static String ID;
     private static int brokerHash;
     private static int current_threads = 1;
-    private static List<Broker> brokers;
-    private static List<Consumer> registeredUsers;
-    private static List<Publisher> registeredPublishers;
+    private static List<Broker> brokers = null;
+    private static List<Consumer> registeredUsers = null;
+    private static List<Publisher> registeredPublishers = null;
+    private static HashMap<String, String> brokerHashtags;
+    private static ServerSocket serverSocket;
 
-    /** Main method, to start the servers */
     public static void main(String[] args) {
         new BrokerImpl().initialize(4321);
     }
 
-    /** Initializer Method */
-    public void initialize(int port) {
+    @Override
+    public void initialize(int port)  {
 
-        ServerSocket serverSocket;
-        Socket connectionSocket;
+        brokerHashtags = new HashMap<>();
+
+        //brokers.add(this);
+
+        Socket connectionSocket = null;
 
         try {
             serverSocket = new ServerSocket(port);
+
+            //HANDLE MULTICAST
+            new Multicast_Handler().start();
+            //
+
+            String serverSocketAddress = serverSocket.getLocalSocketAddress().toString();
+            ID = String.format("Broker_%s", serverSocketAddress);
+            int brokerHash = calculateKeys(ID);
+
+            while(true) {
+                connectionSocket = serverSocket.accept();
+                new Handler(connectionSocket, current_threads).start();
+                current_threads++;
+            }
         } catch(IOException e) {
             /* Crash the server if IO fails. Something bad has happened. */
             throw new RuntimeException("Could not create ServerSocket ", e);
         }
-
-        String ip_address = serverSocket.getInetAddress().toString();
-        String serverSocketAddress = serverSocket.getLocalSocketAddress().toString();
-        ID = String.format("Broker_%s", serverSocketAddress);
-        brokerHash = calculateKeys(ID);
-
-        while (true) {
+        finally {
             try {
-                connectionSocket = serverSocket.accept();
-                new Handler(connectionSocket, current_threads).start();
-                current_threads++;
-            } catch (IOException e) {
-                e.printStackTrace();
-                return;
-            } finally {
-                try {
-                    serverSocket.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                serverSocket.close();
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
             }
         }
     }
 
+    @Override
+    public int calculateKeys(String id) {
+
+        int digest = 0;
+        try {
+            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+            byte[] bb = sha256.digest(id.getBytes(StandardCharsets.UTF_8));
+            BigInteger bigInteger = new BigInteger(1, bb);
+            digest = bigInteger.intValue();
+
+            return digest;
+        }
+        catch (NoSuchAlgorithmException nsae) {
+            nsae.printStackTrace();
+        }
+        finally {
+            return digest;
+        }
+    }
+
+    @Override
+    public Publisher acceptConnection(Publisher publisher) {
+        return null;
+    }
+
+    @Override
+    public Consumer acceptConnection(Consumer consumer) {
+        return null;
+    }
+
+    @Override
+    public void notifyPublisher(String str) {
+
+    }
+
+    @Override
+    public void notifyBrokersOnChanges() {
+
+    }
+
+    @Override
+    public void pull(String channel_or_hashtag) {
+
+    }
+
+    @Override
+    public void filterConsumers() {
+
+    }
+
+
+    @Override
+    public List<Broker> getBrokers() {
+        return brokers;
+    }
+
+    public void connect() {
+        //Pass
+    }
+
+    public void disconnect() {
+        //Pass
+    }
+
+    @Override
+    public void updateNodes() {
+
+    }
+
     /** A Thread subclass to handle one client conversation */
-    static class Handler extends Thread {
-        final Socket socket;
+    class Handler extends Thread {
+
+        Socket socket;
         int threadNumber;
         ObjectInputStream objectInputStream;
         ObjectOutputStream objectOutputStream;
@@ -70,24 +144,48 @@ public class BrokerImpl implements Broker {
             socket = s;
             threadNumber = current_thread;
             setName("Thread " + threadNumber);
+            try {
+                objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
+                objectInputStream = new ObjectInputStream(socket.getInputStream());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         public void run() {
-            while (true) {
+
                 try {
+                        int option = (int) objectInputStream.readObject();;
+                        // If-else statements and calling of specific acceptConnection.
 
-                    int id = objectInputStream.readInt();
+                        /** Node Requests Handle */
+                        if (option == 0) {  // Get Brokers
 
-                    // If-else statements and calling of specific acceptConnection.
-                    if (id == 1) {
-                        handle_push();
-                    }
+                        }
 
-                    socket.close();
-                } catch (IOException e) {
+                        /** Consumer - User Requests Handle */
+                        else if (option == 1) {  // Register User
+                            
+                        } else if (option == 2) {  // Get Topic Video List*
+
+                        } else if (option == 3) {  // Play Data*
+
+                        }
+                        
+                        /** Publisher Requests Handle */
+                        else if (option == 4) {  // Hash Topic?
+
+                        } else if (option == 5) {  // Push?
+
+                        } else if (option == 6) {  // Notify Failure?
+
+                        } else if (option == 7) {  // Notify Brokers for Hashtags
+
+                        }
+
+                } catch (IOException | ClassNotFoundException e) {
                     e.printStackTrace();
                 }
-            }
         }
 
         public void handle_push() {
@@ -111,7 +209,7 @@ public class BrokerImpl implements Broker {
                     chunk = new byte[4096];
                     chunk = objectInputStream.readAllBytes();
                     chunks.add(chunk);
-                    System.out.println(this.socket.getInetAddress().getHostAddress() + ">" + chunk.toString());
+                    System.out.println(this.socket.getInetAddress().getHostAddress() + ">" + chunk);
                 }
 
                 System.out.println("My Arraylist size: " + chunks.size());
@@ -140,77 +238,59 @@ public class BrokerImpl implements Broker {
                     ioException.printStackTrace();
                 }
             }
+        }   
+    }
+
+    /** A Thread subclass to handle broker communication */
+    class Multicast_Handler extends Thread {
+
+        public MulticastSocket multicastSocket;
+        public DatagramPacket packet_receiver;
+
+        Multicast_Handler() {
+
+            try {
+
+                //INITIALIZE MULTICAST SOCKET
+                int multicastPort = 5000;
+                InetAddress brokerIP = InetAddress.getByName("192.168.2.51");
+                SocketAddress multicastSocketAddress = new InetSocketAddress(brokerIP, multicastPort);
+                multicastSocket = new MulticastSocket(multicastSocketAddress);
+
+                //JOIN GROUP ADDRESS
+                InetAddress group_address = InetAddress.getByName("228.5.6.10");
+                multicastSocket.joinGroup(group_address);
+
+                //INITIALIZE DATAGRAM PACKET
+                byte buf[] = new byte[1000];
+                packet_receiver = new DatagramPacket(buf, buf.length);
+
+            }
+            catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
         }
-    }
 
-    public int calculateKeys(String ID) {
-        int digest = 0;
-        try {
-            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
-            byte[] bb = sha256.digest(ID.getBytes(StandardCharsets.UTF_8));
-            BigInteger bigInteger = new BigInteger(1, bb);
-            digest = bigInteger.intValue();
+        @Override
+        public void run() {
 
-            return digest;
+            //RECEIVE PACKET
+            try {
+
+                while (true) {
+                    multicastSocket.receive(packet_receiver);
+                    String message = new String(packet_receiver.getData(), packet_receiver.getOffset(), packet_receiver.getLength());
+                    System.out.println(message);
+
+                    if (message == "break") {
+                        break;
+                    }
+
+                }
+            }
+            catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
         }
-        catch (NoSuchAlgorithmException nsae) {
-            nsae.printStackTrace();
-        }
-        finally {
-            return digest;
-        }
-    }
-
-    public Publisher acceptConnection(Publisher publisher) {
-        return null;
-    }
-
-    public Consumer acceptConnection(Consumer consumer) {
-        return null;
-    }
-
-    public void notifyPublisher(String topic) {
-
-    }
-
-    public void notifyBrokersOnChanges() {
-
-    }
-
-    public void pull(String topic) {
-
-    }
-
-    public void filterConsumers(String id) {
-
-    }
-
-    public List<Broker> getBrokers() {
-        return brokers;
-    }
-
-    public Socket connect() {
-        Socket requestSocket = null;
-
-        try {
-            requestSocket = new Socket("127.0.0.1", 4321);
-        } catch (UnknownHostException unknownHost) {
-            System.err.println("You are trying to connect to an unknown host.");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return requestSocket;
-    }
-
-    public void disconnect(Socket s) {
-        try {
-            s.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    };
-
-    public void updateNodes() {
-
     }
 }

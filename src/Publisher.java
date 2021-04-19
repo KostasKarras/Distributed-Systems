@@ -1,13 +1,15 @@
 import java.util.ArrayList;
 import java.util.List;
 
-public interface Publisher extends Node{
+interface Publisher extends Node{
 
-    ChannelName channelName = null;
+    static final Channel channel = null;
 
     public void addHashTag(String hashtag);
 
     public void removeHashTag(String hashtag);
+
+    public List<Broker> getBrokerList();
 
     public Broker hashTopic(String hashtopic);
 
@@ -17,6 +19,5 @@ public interface Publisher extends Node{
 
     public void notifyBrokersForHashTags(String hashtag);
 
-    public ArrayList <byte[]> generateChunks(VideoFile video);
-
+    public ArrayList<byte[]> generateChunks(VideoFile video);
 }
