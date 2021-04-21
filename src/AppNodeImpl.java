@@ -2,6 +2,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -24,7 +25,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
         channel = new Channel("USER");
 
-        new PublisherHandler().start();
+        new RequestHandler().start();
 
         runUser();
 
@@ -189,19 +190,77 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     }
 
+    //CHANGES HAVE BEEN MADE
     class RequestHandler extends Thread {
-        
-        RequestHandler() {}
 
-        public void run() {}
+        public ServerSocket serverSocket;
+        public Socket connectionSocket;
+        private static final int port = 4900;
+        private int current_threads = 1;
+
+        public void run() {
+
+            try {
+                serverSocket = new ServerSocket(port);
+
+                while(true) {
+                    connectionSocket = serverSocket.accept();
+                    new ServeRequest(connectionSocket, current_threads).start();
+                    current_threads++;
+                }
+            } catch(IOException e) {
+                /* Crash the server if IO fails. Something bad has happened. */
+                throw new RuntimeException("Could not create ServerSocket ", e);
+            } finally {
+                try {
+                    serverSocket.close();
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                }
+            }
+        }
     }
 
     class ServeRequest extends Thread {
 
-        ServeRequest() {}
+        private Socket socket;
+        private int threadNumber;
+        private ObjectInputStream objectInputStream;
+        private ObjectOutputStream objectOutputStream;
+
+        ServeRequest(Socket s, int currentThreads) {
+            requestSocket = s;
+            threadNumber = currentThreads;
+            setName("Thread " + threadNumber);
+            try {
+                objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
+                objectInputStream = new ObjectInputStream(socket.getInputStream());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
 
         public void run() {
-            //OPTIONS
+            try{
+
+                int option = (int) objectInputStream.readObject();
+
+                if (option == 1) { //Pull
+
+                } else if (option == 2) { // Notify Publisher (Broker sends Publisher the keys he is responsible for)
+
+                }
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    objectInputStream.close();
+                    objectOutputStream.close();
+                    socket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }//?
         }
     }
 
