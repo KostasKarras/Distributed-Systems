@@ -1,16 +1,19 @@
-import java.io.*;
-import java.net.*;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.function.ObjIntConsumer;
 
 public class AppNodeImpl implements Publisher, Consumer{
 
     private static Socket requestSocket;
     private static ObjectOutputStream objectOutputStream; // MAY DELETE LATER or PASS THEM TO THE CONSUMER HANDLER
     private static ObjectInputStream objectInputStream;  // SAME
-    private static ChannelName channel;
+    private static Channel channel;
 
     public static void main(String[] args) {
         new AppNodeImpl().initialize(4321);
@@ -22,7 +25,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
         channel = new Channel("USER");
 
-        new PublisherHandler().start();
+        new RequestHandler().start();
 
         runUser();
 
@@ -135,56 +138,6 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
     @Override
-    public void initialize(int port) {
-
-        channel = new ChannelName("user");
-        handle_multicast();
-
-        ArrayList<String> videoHashtags = new ArrayList<>();
-        videoHashtags.add("First File");
-
-        VideoFile vf = new VideoFile("C:\\Users\\miked\\Videos\\Captures\\Numb (Official Video) - Linkin Park - YouTube - Google Chrome 2020-04-03 14-10-06.mp4", videoHashtags);
-        push("#TIPOTES", vf);
-
-    }
-
-    //THIS FUNCTION WAS USED FOR TESTING MULTICAST SOCKET
-    public void handle_multicast() {
-
-        try {
-
-            MulticastSocket multicastSocket;
-
-            //INITIALIZE MULTICAST SOCKET
-            int multicastPort = 5000;
-            InetAddress AppNodeIP = InetAddress.getByName("192.168.2.51");
-            SocketAddress multicastSocketAddress = new InetSocketAddress(AppNodeIP, multicastPort);
-            multicastSocket = new MulticastSocket(multicastSocketAddress);
-
-            //JOIN GROUP ADDRESS
-            InetAddress group_address = InetAddress.getByName("228.5.6.10");
-            multicastSocket.joinGroup(group_address);
-
-            //SEND PACKET
-            DatagramPacket send_packet = new DatagramPacket("Good Morning".getBytes(), "Good Morning".length(), group_address, multicastPort);
-            multicastSocket.send(send_packet);
-
-            //CLOSE MULTICAST SOCKET
-            multicastSocket.leaveGroup(group_address);
-            multicastSocket.close();
-
-        }
-        catch (UnknownHostException uhe) {
-            uhe.printStackTrace();
-        }
-        catch (IOException ioe) {
-            ioe.printStackTrace();
-        }
-
-    }
-    //
-
-    @Override
     public List<Broker> getBrokers() {
         return null;
     }
@@ -237,19 +190,77 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     }
 
+    //CHANGES HAVE BEEN MADE
     class RequestHandler extends Thread {
-        
-        RequestHandler() {}
 
-        public void run() {}
+        public ServerSocket serverSocket;
+        public Socket connectionSocket;
+        private static final int port = 4900;
+        private int current_threads = 1;
+
+        public void run() {
+
+            try {
+                serverSocket = new ServerSocket(port);
+
+                while(true) {
+                    connectionSocket = serverSocket.accept();
+                    new ServeRequest(connectionSocket, current_threads).start();
+                    current_threads++;
+                }
+            } catch(IOException e) {
+                /* Crash the server if IO fails. Something bad has happened. */
+                throw new RuntimeException("Could not create ServerSocket ", e);
+            } finally {
+                try {
+                    serverSocket.close();
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                }
+            }
+        }
     }
 
     class ServeRequest extends Thread {
 
-        ServeRequest() {}
+        private Socket socket;
+        private int threadNumber;
+        private ObjectInputStream objectInputStream;
+        private ObjectOutputStream objectOutputStream;
+
+        ServeRequest(Socket s, int currentThreads) {
+            requestSocket = s;
+            threadNumber = currentThreads;
+            setName("Thread " + threadNumber);
+            try {
+                objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
+                objectInputStream = new ObjectInputStream(socket.getInputStream());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
 
         public void run() {
-            //OPTIONS
+            try{
+
+                int option = (int) objectInputStream.readObject();
+
+                if (option == 1) { //Pull
+
+                } else if (option == 2) { // Notify Publisher (Broker sends Publisher the keys he is responsible for)
+
+                }
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    objectInputStream.close();
+                    objectOutputStream.close();
+                    socket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }//?
         }
     }
 

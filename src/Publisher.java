@@ -3,7 +3,7 @@ import java.util.List;
 
 interface Publisher extends Node{
 
-    static final ChannelName channelName = null;
+    static final Channel channel = null;
 
     public void addHashTag(String hashtag);
 
