@@ -1,10 +1,11 @@
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.UnknownHostException;
+import java.math.BigInteger;
+import java.net.*;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,11 +22,12 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     @Override
     public void initialize(int port) {
-        
 
         channel = new Channel("USER");
 
         new RequestHandler().start();
+
+        new Multicast_Handler().start();
 
         runUser();
 
@@ -59,7 +61,21 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     @Override
     public Broker hashTopic(String hashtopic) {
-        return null;
+        int digest = 0;
+        try {
+            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+            byte[] bb = sha256.digest(hashtopic.getBytes(StandardCharsets.UTF_8));
+            BigInteger bigInteger = new BigInteger(1, bb);
+            digest = bigInteger.intValue();
+
+            return new BrokerImpl();
+        }
+        catch (NoSuchAlgorithmException nsae) {
+            nsae.printStackTrace();
+        }
+        finally {
+            return new BrokerImpl();
+        }
     }
 
     @Override
@@ -264,7 +280,61 @@ public class AppNodeImpl implements Publisher, Consumer{
         }
     }
 
+    /** A Thread subclass to handle broker communication */
+    class Multicast_Handler extends Thread {
+
+        public MulticastSocket multicastSocket;
+        public DatagramPacket packet_receiver;
+
+        Multicast_Handler() {
+
+            try {
+
+                //INITIALIZE MULTICAST SOCKET
+                int multicastPort = 5000;
+                InetAddress brokerIP = InetAddress.getByName("192.168.2.54");
+                SocketAddress multicastSocketAddress = new InetSocketAddress(brokerIP, multicastPort);
+                multicastSocket = new MulticastSocket(multicastSocketAddress);
+
+                //JOIN GROUP ADDRESS
+                InetAddress group_address = InetAddress.getByName("228.5.6.8");
+                multicastSocket.joinGroup(group_address);
+
+                //INITIALIZE DATAGRAM PACKET
+                byte buf[] = new byte[1000];
+                packet_receiver = new DatagramPacket(buf, buf.length);
+
+            }
+            catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
+        }
+
+        @Override
+        public void run() {
+
+            //RECEIVE PACKET
+            try {
+
+                while (true) {
+                    multicastSocket.receive(packet_receiver);
+                    String message = new String(packet_receiver.getData(), packet_receiver.getOffset(), packet_receiver.getLength());
+                    System.out.println(message + " to everyone !");
+
+                    if (message == "break") {
+                        break;
+                    }
+
+                }
+            }
+            catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
+        }
+    }
+
     public void runUser() {
         //BUILD INTERFACE
+
     }
 }

@@ -1,3 +1,4 @@
+import javax.xml.crypto.Data;
 import java.io.*;
 import java.math.BigInteger;
 import java.net.*;
@@ -20,6 +21,11 @@ public class BrokerImpl implements Broker{
     private static HashMap<String, String> brokerHashtags;
     private static ServerSocket serverSocket;
 
+    //CHANGE
+    private static InetAddress userMulticastIP;
+    static HashMap<Integer, Broker> brokerHashes = new HashMap<>();
+    //
+
     public static void main(String[] args) {
         new BrokerImpl().initialize(4321);
     }
@@ -36,9 +42,13 @@ public class BrokerImpl implements Broker{
         try {
             serverSocket = new ServerSocket(port);
 
+            //CHANGE
+            userMulticastIP = InetAddress.getByName("228.5.6.8");
+            //
+
             //HANDLE MULTICAST
             new Multicast_Handler().start();
-            //
+
 
             String serverSocketAddress = serverSocket.getLocalSocketAddress().toString();
             ID = String.format("Broker_%s", serverSocketAddress);
@@ -71,6 +81,8 @@ public class BrokerImpl implements Broker{
             byte[] bb = sha256.digest(id.getBytes(StandardCharsets.UTF_8));
             BigInteger bigInteger = new BigInteger(1, bb);
             digest = bigInteger.intValue();
+
+            brokerHashes.put(digest, this);
 
             return digest;
         }
@@ -155,37 +167,46 @@ public class BrokerImpl implements Broker{
         public void run() {
 
                 try {
-                        int option = (int) objectInputStream.readObject();;
-                        // If-else statements and calling of specific acceptConnection.
+                    //TEST
+                    ArrayList<String> colors = new ArrayList<>();
+                    colors.add("Red");
+                    colors.add("Yellow");
+                    colors.add("Black");
+                    objectOutputStream.writeObject(colors);
+                    objectOutputStream.flush();
+                    //
 
-                        /** Node Requests Handle */
-                        if (option == 0) {  // Get Brokers
+                    int option = (int) objectInputStream.readObject();;
+                    // If-else statements and calling of specific acceptConnection.
 
-                        }
+                    /** Node Requests Handle */
+                    if (option == 0) {  // Get Brokers
 
-                        /** Consumer - User Requests Handle */
-                        else if (option == 1) {  // Register User
-                            
-                        } else if (option == 2) {  // Get Topic Video List*
+                    }
 
-                        } else if (option == 3) {  // Play Data*
+                    /** Consumer - User Requests Handle */
+                    else if (option == 1) {  // Register User
 
-                        }
-                        
-                        /** Publisher Requests Handle */
-                        else if (option == 4) {  // Hash Topic?
+                    } else if (option == 2) {  // Get Topic Video List*
 
-                        } else if (option == 5) {  // Push?
+                    } else if (option == 3) {  // Play Data*
 
-                        } else if (option == 6) {  // Notify Failure?
+                    }
 
-                        } else if (option == 7) {  // Notify Brokers for Hashtags
+                    /** Publisher Requests Handle */
+                    else if (option == 4) {  // Hash Topic?
 
-                        }
+                    } else if (option == 5) {  // Push?
 
-                } catch (IOException | ClassNotFoundException e) {
-                    e.printStackTrace();
-                }
+                    } else if (option == 6) {  // Notify Failure?
+
+                    } else if (option == 7) {  // Notify Brokers for Hashtags
+
+                    }
+
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            }
         }
 
         public void handle_push() {
