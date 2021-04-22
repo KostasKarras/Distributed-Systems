@@ -84,4 +84,8 @@ public class Channel {
     public void removeHashTag(String hashtag) {
         hashtagsPublished.remove(hashtag);
     }
+
+    public HashMap<Integer, VideoFile> getChannelVideos(){
+        return this.ID_VideoFileMap;
+    }
 }

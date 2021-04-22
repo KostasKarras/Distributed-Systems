@@ -1,3 +1,4 @@
+import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,7 +12,7 @@ interface Publisher extends Node{
 
     public List<Broker> getBrokerList();
 
-    public Broker hashTopic(String hashtopic);
+    public SocketAddress hashTopic(String hashtopic);
 
     public void push(String hashtags, VideoFile video);
 

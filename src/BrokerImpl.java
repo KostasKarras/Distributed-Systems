@@ -8,6 +8,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.TreeMap;
 
 public class BrokerImpl implements Broker{
 
@@ -18,24 +19,42 @@ public class BrokerImpl implements Broker{
     private static List<Broker> brokers = null;
     private static List<Consumer> registeredUsers = null;
     private static List<Publisher> registeredPublishers = null;
-    private static HashMap<String, String> brokerHashtags;
+    private static HashMap<String, ArrayList<SocketAddress>> brokerHashtags;
+
     private static ServerSocket serverSocket;
 
     //CHANGE
     private static InetAddress userMulticastIP;
-    static HashMap<Integer, Broker> brokerHashes = new HashMap<>();
+        //We make brokerHashes treemap because we need hashes sorted in
+        //hashTopic in AppNode
+    static TreeMap<Integer, SocketAddress> brokerHashes;
+    private static HashMap<String, SocketAddress> brokerChannelNames;
     //
 
     public static void main(String[] args) {
+
+        //TEST
+        try {
+            ServerSocket s = new ServerSocket(4321);
+            String[] a = s.getLocalSocketAddress().toString().split(":");
+            System.out.println(Integer.parseInt(a[1]) + 5);
+            s.close();
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        }
+
+        //
         new BrokerImpl().initialize(4321);
     }
 
     @Override
     public void initialize(int port)  {
 
+        //CHANGE
         brokerHashtags = new HashMap<>();
-
-        //brokers.add(this);
+        brokerChannelNames = new HashMap<>();
+        brokerHashes = new TreeMap<>();
+        //CHANGE
 
         Socket connectionSocket = null;
 
@@ -49,10 +68,10 @@ public class BrokerImpl implements Broker{
             //HANDLE MULTICAST
             new Multicast_Handler().start();
 
-
             String serverSocketAddress = serverSocket.getLocalSocketAddress().toString();
             ID = String.format("Broker_%s", serverSocketAddress);
-            int brokerHash = calculateKeys(ID);
+            brokerHash = calculateKeys(ID);
+            brokerHashes.put(brokerHash, serverSocket.getLocalSocketAddress());
 
             while(true) {
                 connectionSocket = serverSocket.accept();
@@ -81,8 +100,6 @@ public class BrokerImpl implements Broker{
             byte[] bb = sha256.digest(id.getBytes(StandardCharsets.UTF_8));
             BigInteger bigInteger = new BigInteger(1, bb);
             digest = bigInteger.intValue();
-
-            brokerHashes.put(digest, this);
 
             return digest;
         }
@@ -117,6 +134,41 @@ public class BrokerImpl implements Broker{
     @Override
     public void pull(String channel_or_hashtag) {
 
+        SocketAddress publisherAddress; //For channel names
+        ArrayList<SocketAddress> addresses; // For hashtags (many channels)
+
+        //Check if this is channel name or hashtag
+        try {
+            if (channel_or_hashtag.charAt(0) == '#') {
+                addresses = brokerHashtags.get(channel_or_hashtag);
+                for (SocketAddress address : addresses) {
+                    //Generate a thread for each address
+                }
+            }
+            else {
+                publisherAddress = brokerChannelNames.get(channel_or_hashtag);
+
+                //Split ip and port from address
+                String[] ipPort = publisherAddress.toString().split(":");
+                InetAddress publisher_ip = InetAddress.getByName(ipPort[0]);
+                int publisher_port = Integer.parseInt(ipPort[1]);
+
+                //Make connection with client
+                Socket pullSocket = new Socket(publisher_ip, publisher_port);
+                ObjectInputStream objectInputStream = new ObjectInputStream(pullSocket.getInputStream());
+                ObjectOutputStream objectOutputStream = new ObjectOutputStream(pullSocket.getOutputStream());
+
+                //Give option code
+                objectOutputStream.writeObject(1);
+                objectOutputStream.flush();
+
+                //
+            }
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        }
     }
 
     @Override
@@ -167,14 +219,6 @@ public class BrokerImpl implements Broker{
         public void run() {
 
                 try {
-                    //TEST
-                    ArrayList<String> colors = new ArrayList<>();
-                    colors.add("Red");
-                    colors.add("Yellow");
-                    colors.add("Black");
-                    objectOutputStream.writeObject(colors);
-                    objectOutputStream.flush();
-                    //
 
                     int option = (int) objectInputStream.readObject();;
                     // If-else statements and calling of specific acceptConnection.
