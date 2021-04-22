@@ -1,10 +1,15 @@
-import java.io.*;
-import java.lang.ref.Reference;
-import java.util.*;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
 
 public class AppNodeImpl implements Publisher, Consumer{
 
@@ -144,19 +149,6 @@ public class AppNodeImpl implements Publisher, Consumer{
         }
         return my_arraylist;
     }
-
-//    @Override
-//    public void initialize(int port) {
-//
-//        channel = new ChannelName("user");
-//
-//        ArrayList<String> videoHashtags = new ArrayList<>();
-//        videoHashtags.add("First File");
-//
-//        VideoFile vf = new VideoFile("C:\\Users\\miked\\Videos\\Captures\\Numb (Official Video) - Linkin Park - YouTube - Google Chrome 2020-04-03 14-10-06.mp4", videoHashtags);
-//        push("#TIPOTES", vf);
-//
-//    }
 
     @Override
     public List<Broker> getBrokers() {
