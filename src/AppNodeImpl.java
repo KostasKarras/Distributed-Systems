@@ -343,7 +343,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                                         exists = true;
                                 }
                                 if (exists)
-                                    System.out.println("Hashtag already exists");
+                                    System.out.println("Hashtag already exists.");
                                 else {
                                     ArrayList<String> temp = new ArrayList<String>(item.getValue().getAssociatedHashtags());
                                     temp.add(hashtag);
@@ -370,12 +370,10 @@ public class AppNodeImpl implements Publisher, Consumer{
             } else if (choice.equals("5")) {
                 String video;
                 boolean flag = true;
-                HashMap<Integer, VideoFile> channelsVideos;
                 do {
                     System.out.print("Name the video, that you want to remove the hashtag: ");
                     video = in.nextLine();
-                    channelsVideos = channel.getChannelVideos();
-                    for (Map.Entry<Integer, VideoFile> item : channelsVideos.entrySet()){
+                    for (Map.Entry<Integer, VideoFile> item : this.channel.getChannelVideos().entrySet()){
                         if (item.getValue().getVideoName().equals(video))
                             flag = false;
                     }
@@ -393,7 +391,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                         System.out.print("Give me the hashtag that you want to remove: ");
                         String hashtag = in.nextLine();
                         boolean exists = false;
-                        for (Map.Entry<Integer, VideoFile> item : channelsVideos.entrySet()) {
+                        for (Map.Entry<Integer, VideoFile> item : this.channel.getChannelVideos().entrySet()) {
                             if (item.getValue().getVideoName().equals(video)) {
                                 for (String videoHashtag : item.getValue().getAssociatedHashtags()) {
                                     if (videoHashtag.equals(hashtag))
@@ -405,9 +403,10 @@ public class AppNodeImpl implements Publisher, Consumer{
                                     item.getValue().getAssociatedHashtags().clear();
                                     for (String tempHashtag : temp)
                                         item.getValue().addAssociatedHashTags(tempHashtag);//may notify the brokers
+                                    System.out.println("Hashtag '" + hashtag + "' removed.");
                                 }
                                 else
-                                    System.out.println("Hashtag doesn't exists");
+                                    System.out.println("Hashtag doesn't exists.");
                             }
                         }
                     } else {
@@ -421,6 +420,10 @@ public class AppNodeImpl implements Publisher, Consumer{
             } else if (choice.equals("6")) {
                 System.out.print("Give me the path of the file that you want to upload: ");
                 String filepath = in.nextLine();
+                for (Map.Entry<Integer, VideoFile> item : this.channel.getChannelVideos().entrySet()) {
+                    if (item.getValue().getVideoName().equals(filepath))
+                        System.out.println("Video is already uploaded!");
+                }
                 boolean flag;
                 ArrayList<String> associatedHashtags = new ArrayList<String>();
                 do {
@@ -430,7 +433,15 @@ public class AppNodeImpl implements Publisher, Consumer{
                         flag = true;
                         System.out.print("Give me the hashtag: ");
                         String hashtag = in.nextLine();
-                        associatedHashtags.add(hashtag);
+                        boolean exists = false;
+                        for (String hashtagIn : associatedHashtags){
+                            if (hashtagIn.equals(hashtag)) {
+                                System.out.println("Hashtag already exists.");
+                                exists = true;
+                            }
+                        }
+                        if (!exists)
+                            associatedHashtags.add(hashtag);
                     }
                     else {
                         flag = false;
@@ -441,22 +452,6 @@ public class AppNodeImpl implements Publisher, Consumer{
                 for (String hashtag : associatedHashtags){
                     notifyBrokersForHashTags(hashtag);
                 }
-//                ArrayList<VideoFile> videos = this.channel.getVideoFiles_byHashtag("Tipota");
-//                VideoFile myVideoFile = videos.get(0);
-//                ArrayList<byte[]> chunks = generateChunks(myVideoFile);
-//                try {
-//                    File nf = new File("C:\\Users\\Kostas\\Desktop\\test.mp4");
-//                    for (byte[] ar : chunks) {
-//                        FileOutputStream fw = new FileOutputStream(nf, true);
-//                        try {
-//                            fw.write(ar);
-//                        } finally {
-//                            fw.close();
-//                        }
-//                    }
-//                } catch (IOException | NullPointerException e) {
-//                    e.printStackTrace();
-//                }
             } else if (choice.equals("7")){
                 System.out.print("Give me the path of the file that you want to delete: ");
                 String filepath = in.nextLine();
