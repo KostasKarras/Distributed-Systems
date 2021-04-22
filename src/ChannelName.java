@@ -75,6 +75,11 @@ public class ChannelName {
     public VideoFile getVideoFile_byID (int ID) {
         return ID_VideoFileMap.get(ID);
     }
+    /**KOSTAS-START*/
+    public HashMap<Integer, VideoFile> getChannelVideos(){
+        return this.ID_VideoFileMap;
+    }
+    /**KOSTAS-END*/
 
     /** Setters */
     public void addHashTag(String hashtag) {
