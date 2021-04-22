@@ -217,6 +217,14 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     }
 
+    public void sendChannelVideoList(ServeRequest serveRequest) {
+        try{
+            serveRequest.objectOutputStream.writeObject(channel.getChannelVideos());
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        }
+    }
+
     //CHANGES HAVE BEEN MADE
     class RequestHandler extends Thread {
 
@@ -273,6 +281,14 @@ public class AppNodeImpl implements Publisher, Consumer{
                 int option = (int) objectInputStream.readObject();
 
                 if (option == 1) { //Pull
+
+                    //Choice between sending whole channel or files based on hashtag
+                    String choice = (String) objectInputStream.readObject();
+                    if (choice.equals("CHANNEL")) {
+                        sendChannelVideoList(this);
+                    }
+                    else {
+                    }
 
                 } else if (option == 2) { // Notify Publisher (Broker sends Publisher the keys he is responsible for)
 

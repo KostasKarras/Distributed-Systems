@@ -162,7 +162,13 @@ public class BrokerImpl implements Broker{
                 objectOutputStream.writeObject(1);
                 objectOutputStream.flush();
 
-                //
+                //Give operation
+                objectOutputStream.writeObject("CHANNEL");
+                objectOutputStream.flush();
+
+                //Store channel videos
+
+                //return
             }
         } catch (UnknownHostException e) {
             e.printStackTrace();
