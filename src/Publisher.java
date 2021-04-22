@@ -13,11 +13,11 @@ interface Publisher extends Node{
 
     public Broker hashTopic(String hashtopic);
 
-    public void push(String hashtags, Value video);
+    public void push(String hashtags, VideoFile video);
 
     public void notifyFailure(Broker broker);
 
     public void notifyBrokersForHashTags(String hashtag);
 
-    public ArrayList<byte[]> generateChunks(String filepath, ArrayList<String> hashtags);
+    public ArrayList<byte[]> generateChunks(VideoFile video);
 }
