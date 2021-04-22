@@ -362,7 +362,6 @@ public class AppNodeImpl implements Publisher, Consumer{
                     if (answer.equals("n"))
                         break;
                 }while (true);
-                /**KOSTAS-END*/
                 // if (exo anebasei video me ayto to hashtag)
                 // pass
                 // else
@@ -467,6 +466,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                     System.out.println("Video deleted from channel!");
                 else
                     System.out.println("Video not found!");
+                /**KOSTAS-END*/
             } else if (choice.equals("0")) {
                 end = 1;
             }
