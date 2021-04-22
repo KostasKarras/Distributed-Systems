@@ -6,15 +6,14 @@ public class VideoFile {
     /** Class Variables */
     private String filepath;
     private ArrayList<String> associatedHashtags;
+    private String videoName;
     private int videoID;
-
-    /**KOSTAS*/
-    public VideoFile(){};
 
     /** Constructor */
     public VideoFile (String filepath, ArrayList<String> associatedHashtags) {
         this.filepath = filepath;
         this.associatedHashtags = associatedHashtags;
+        this.videoName = filepath;
     }
 
     public byte[] getVideoFileChunk() {
@@ -47,9 +46,15 @@ public class VideoFile {
         return videoID;
     }
 
+    /**KOSTAS-START*/
+    public String getVideoName(){
+        return this.videoName;
+    }
+    /**KOSTAS-END*/
+
     /** Setters */
     public void addAssociatedHashTags(String hashtag){
-        associatedHashtags.add(hashtag);
+        this.associatedHashtags.add(hashtag);
     }
 
     public void setVideoID(int videoID) {
