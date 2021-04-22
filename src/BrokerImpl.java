@@ -195,7 +195,7 @@ public class BrokerImpl implements Broker{
                     int key = calculateKeys(newHashtag);
                     ArrayList<String> hashtags = new ArrayList<String>();
                     hashtags.add(newHashtag);
-                    hashtagPublisherMap.put("Publisher1", hashtags);
+                    //hashtagPublisherMap.put("Publisher1", hashtags);
                     /**KOSTAS-END*/
                 }
 
