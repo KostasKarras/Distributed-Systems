@@ -219,7 +219,12 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     public void sendChannelVideoList(ServeRequest serveRequest) {
         try{
-            serveRequest.objectOutputStream.writeObject(channel.getChannelVideos());
+            //serveRequest.objectOutputStream.writeObject(channel.getChannelVideoNames());
+            HashMap<Integer, String> test = new HashMap<>();
+            test.put(10, "Michalis");
+            test.put(20, "George");
+            test.put(30, "Grace");
+            serveRequest.objectOutputStream.writeObject(test);
         } catch (IOException ioException) {
             ioException.printStackTrace();
         }
@@ -258,7 +263,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     class ServeRequest extends Thread {
 
-        private Socket socket;
+        private Socket requestSocket;
         private int threadNumber;
         private ObjectInputStream objectInputStream;
         private ObjectOutputStream objectOutputStream;
@@ -268,8 +273,8 @@ public class AppNodeImpl implements Publisher, Consumer{
             threadNumber = currentThreads;
             setName("Thread " + threadNumber);
             try {
-                objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
-                objectInputStream = new ObjectInputStream(socket.getInputStream());
+                objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
+                objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -284,6 +289,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
                     //Choice between sending whole channel or files based on hashtag
                     String choice = (String) objectInputStream.readObject();
+                    System.out.println(choice);
                     if (choice.equals("CHANNEL")) {
                         sendChannelVideoList(this);
                     }
@@ -299,7 +305,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                 try {
                     objectInputStream.close();
                     objectOutputStream.close();
-                    socket.close();
+                    requestSocket.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -448,7 +454,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                 do {
                     System.out.print("Name the video, that you want to remove the hashtag: ");
                     video = in.nextLine();
-                    for (Map.Entry<Integer, VideoFile> item : this.channel.getChannelVideos().entrySet()){
+                    for (Map.Entry<Integer, VideoFile> item : channel.getChannelVideos().entrySet()){
                         if (item.getValue().getVideoName().equals(video))
                             flag = false;
                     }
@@ -466,7 +472,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                         System.out.print("Give me the hashtag that you want to remove: ");
                         String hashtag = in.nextLine();
                         boolean exists = false;
-                        for (Map.Entry<Integer, VideoFile> item : this.channel.getChannelVideos().entrySet()) {
+                        for (Map.Entry<Integer, VideoFile> item : channel.getChannelVideos().entrySet()) {
                             if (item.getValue().getVideoName().equals(video)) {
                                 for (String videoHashtag : item.getValue().getAssociatedHashtags()) {
                                     if (videoHashtag.equals(hashtag))
@@ -495,7 +501,7 @@ public class AppNodeImpl implements Publisher, Consumer{
             } else if (choice.equals("6")) {
                 System.out.print("Give me the path of the file that you want to upload: ");
                 String filepath = in.nextLine();
-                for (Map.Entry<Integer, VideoFile> item : this.channel.getChannelVideos().entrySet()) {
+                for (Map.Entry<Integer, VideoFile> item : channel.getChannelVideos().entrySet()) {
                     if (item.getValue().getVideoName().equals(filepath))
                         System.out.println("Video is already uploaded!");
                 }
@@ -523,7 +529,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                     }
                 }while(flag);
                 VideoFile videoFile = new VideoFile(filepath, associatedHashtags);
-                this.channel.addVideoFile(videoFile);
+                channel.addVideoFile(videoFile);
                 for (String hashtag : associatedHashtags){
                     notifyBrokersForHashTags(hashtag);
                 }

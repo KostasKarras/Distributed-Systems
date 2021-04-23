@@ -10,6 +10,8 @@ public class Channel {
     private int counterVideoID;
     private HashMap<Integer, VideoFile> ID_VideoFileMap;
 
+    private HashMap<Integer, String> ID_VideoNameMap;
+
     /** Constructors */
 
     //For new users
@@ -19,21 +21,25 @@ public class Channel {
         hashtagVideoFilesMap = new HashMap<>();
         counterVideoID = 0;
         ID_VideoFileMap = new HashMap<>();
+        ID_VideoNameMap = new HashMap<>();
     }
 
     //To create existing channels
     public Channel(String channelName, ArrayList<String> hashtagsPublished, HashMap<String, ArrayList<VideoFile>>
-            hashtagVideoFilesMap, int counterVideoID, HashMap<Integer, VideoFile> ID_VideoFileMap) {
+            hashtagVideoFilesMap, int counterVideoID, HashMap<Integer, VideoFile> ID_VideoFileMap,
+                   HashMap<Integer, String> ID_VideoNameMap) {
         this.channelName = channelName;
         this.hashtagsPublished = hashtagsPublished;
         this.hashtagVideoFilesMap = hashtagVideoFilesMap;
         this.counterVideoID = counterVideoID;
         this.ID_VideoFileMap = ID_VideoFileMap;
+        this.ID_VideoNameMap = ID_VideoNameMap;
     }
 
     public void addVideoFile(VideoFile video) {
         video.setVideoID(counterVideoID);
         ID_VideoFileMap.put(counterVideoID, video);
+        ID_VideoNameMap.put(counterVideoID, video.getVideoName());
         counterVideoID++;
 
         ArrayList<String> hashtags = video.getAssociatedHashtags();
@@ -54,6 +60,7 @@ public class Channel {
 
     public void removeVideoFile(VideoFile video) {
         ID_VideoFileMap.remove(video.getVideoID());
+        ID_VideoNameMap.remove(video.getVideoID());
 
         ArrayList<String> hashtags = video.getAssociatedHashtags();
         for (String hashtag : hashtags) {
@@ -77,6 +84,14 @@ public class Channel {
         return ID_VideoFileMap.get(ID);
     }
 
+    public HashMap<Integer, VideoFile> getChannelVideos(){
+        return ID_VideoFileMap;
+    }
+
+    public HashMap<Integer, String> getChannelVideoNames() {
+        return ID_VideoNameMap;
+    }
+
     /** Setters */
     public void addHashTag(String hashtag) {
         hashtagsPublished.add(hashtag);
@@ -84,10 +99,6 @@ public class Channel {
 
     public void removeHashTag(String hashtag) {
         hashtagsPublished.remove(hashtag);
-    }
-
-    public HashMap<Integer, VideoFile> getChannelVideos(){
-        return this.ID_VideoFileMap;
     }
 
 

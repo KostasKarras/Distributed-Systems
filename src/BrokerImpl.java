@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.TreeMap;
+import java.util.function.ObjIntConsumer;
 
 public class BrokerImpl implements Broker{
 
@@ -32,18 +33,7 @@ public class BrokerImpl implements Broker{
     //
 
     public static void main(String[] args) {
-
         //TEST
-        try {
-            ServerSocket s = new ServerSocket(4321);
-            String[] a = s.getLocalSocketAddress().toString().split(":");
-            System.out.println(Integer.parseInt(a[1]) + 5);
-            s.close();
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
-        }
-
-        //
         new BrokerImpl().initialize(4321);
     }
 
@@ -136,6 +126,13 @@ public class BrokerImpl implements Broker{
 
         SocketAddress publisherAddress; //For channel names
         ArrayList<SocketAddress> addresses; // For hashtags (many channels)
+        String[] ipPort;
+        InetAddress publisher_ip;
+        int publisher_port;
+        Socket pullSocket;
+        ObjectOutputStream objectOutputStream;
+        ObjectInputStream objectInputStream;
+        HashMap<Integer, String> channelVideoList;
 
         //Check if this is channel name or hashtag
         try {
@@ -149,14 +146,14 @@ public class BrokerImpl implements Broker{
                 publisherAddress = brokerChannelNames.get(channel_or_hashtag);
 
                 //Split ip and port from address
-                String[] ipPort = publisherAddress.toString().split(":");
-                InetAddress publisher_ip = InetAddress.getByName(ipPort[0]);
-                int publisher_port = Integer.parseInt(ipPort[1]);
+                ipPort = publisherAddress.toString().split(":");
+                publisher_ip = InetAddress.getByName(ipPort[0].substring(1));
+                publisher_port = Integer.parseInt(ipPort[1]);
 
                 //Make connection with client
-                Socket pullSocket = new Socket(publisher_ip, publisher_port);
-                ObjectInputStream objectInputStream = new ObjectInputStream(pullSocket.getInputStream());
-                ObjectOutputStream objectOutputStream = new ObjectOutputStream(pullSocket.getOutputStream());
+                pullSocket = new Socket(publisher_ip, publisher_port);
+                objectInputStream = new ObjectInputStream(pullSocket.getInputStream());
+                objectOutputStream = new ObjectOutputStream(pullSocket.getOutputStream());
 
                 //Give option code
                 objectOutputStream.writeObject(1);
@@ -167,13 +164,16 @@ public class BrokerImpl implements Broker{
                 objectOutputStream.flush();
 
                 //Store channel videos
+                channelVideoList = (HashMap<Integer, String>) objectInputStream.readObject();
+                System.out.println(channelVideoList);
 
-                //return
             }
         } catch (UnknownHostException e) {
             e.printStackTrace();
         } catch (IOException ioException) {
             ioException.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
         }
     }
 
