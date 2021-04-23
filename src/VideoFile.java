@@ -10,10 +10,10 @@ public class VideoFile {
     private String videoName;
 
     /** Constructor */
-    public VideoFile (String filepath, ArrayList<String> associatedHashtags) {
+    public VideoFile (String filepath, ArrayList<String> associatedHashtags, String videoName) {
         this.filepath = filepath;
         this.associatedHashtags = associatedHashtags;
-        this.videoName = filepath;
+        this.videoName = videoName;
     }
 
     public byte[] getVideoFileChunk() {

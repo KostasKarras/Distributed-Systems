@@ -401,8 +401,10 @@ public class AppNodeImpl implements Publisher, Consumer{
                     video = in.nextLine();
                     channelsVideos = channel.getChannelVideos();
                     for (Map.Entry<Integer, VideoFile> item : channelsVideos.entrySet()){
-                        if (item.getValue().getVideoName().equals(video))
+                        if (item.getValue().getVideoName().equals(video)) {
                             flag = false;
+                            break;
+                        }
                     }
                     if (flag) {
                         System.out.println("The video doesn't exists. Try again!");
@@ -420,9 +422,10 @@ public class AppNodeImpl implements Publisher, Consumer{
                         boolean exists = false;
                         for (Map.Entry<Integer, VideoFile> item : channelsVideos.entrySet()) {
                             if (item.getValue().getVideoName().equals(video)) {
-                                for (String videoHashtag : item.getValue().getAssociatedHashtags()) {
-                                    if (videoHashtag.equals(hashtag))
-                                        exists = true;
+                                if(item.getValue().getAssociatedHashtags().contains(hashtag)){
+                                    // for (String videoHashtag : item.getValue().getAssociatedHashtags()) {
+                                    //     if (videoHashtag.equals(hashtag))
+                                    exists = true;
                                 }
                                 if (exists)
                                     System.out.println("Hashtag already exists.");
@@ -501,12 +504,8 @@ public class AppNodeImpl implements Publisher, Consumer{
             } else if (choice.equals("6")) {
                 System.out.print("Give me the path of the file that you want to upload: ");
                 String filepath = in.nextLine();
-                for (Map.Entry<Integer, VideoFile> item : channel.getChannelVideos().entrySet()) {
-                    if (item.getValue().getVideoName().equals(filepath))
-                        System.out.println("Video is already uploaded!");
-                }
                 boolean flag;
-                ArrayList<String> associatedHashtags = new ArrayList<String>();
+                ArrayList<String> associatedHashtags = new ArrayList<>();
                 do {
                     System.out.print("Do you want to add a hashtag?(y/n)");
                     String choice2 = in.nextLine();
@@ -528,7 +527,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                         flag = false;
                     }
                 }while(flag);
-                VideoFile videoFile = new VideoFile(filepath, associatedHashtags);
+                VideoFile videoFile = new VideoFile(filepath, associatedHashtags, null);
                 channel.addVideoFile(videoFile);
                 for (String hashtag : associatedHashtags){
                     notifyBrokersForHashTags(hashtag);
