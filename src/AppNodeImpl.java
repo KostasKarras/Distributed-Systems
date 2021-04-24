@@ -29,6 +29,8 @@ public class AppNodeImpl implements Publisher, Consumer{
 
         new RequestHandler().start();
 
+        new Multicast_Handler().start();
+
         runUser();
 
         //THINK FOR TOMMOROW THE IMPLEMENTATION!
@@ -320,6 +322,58 @@ public class AppNodeImpl implements Publisher, Consumer{
                     e.printStackTrace();
                 }
             }//?
+        }
+    }
+
+    class Multicast_Handler extends Thread {
+
+        public MulticastSocket multicastSocket;
+        public DatagramPacket packet_receiver;
+
+        Multicast_Handler() {
+
+            try {
+
+                //INITIALIZE MULTICAST SOCKET
+                int multicastPort = 5000;
+                InetAddress brokerIP = InetAddress.getByName("192.168.2.54");
+                SocketAddress multicastSocketAddress = new InetSocketAddress(brokerIP, multicastPort);
+                multicastSocket = new MulticastSocket(multicastSocketAddress);
+
+                //JOIN GROUP ADDRESS
+                InetAddress group_address = InetAddress.getByName("228.5.6.8");
+                multicastSocket.joinGroup(group_address);
+
+                //INITIALIZE DATAGRAM PACKET
+                byte buf[] = new byte[1000];
+                packet_receiver = new DatagramPacket(buf, buf.length);
+
+            }
+            catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
+        }
+
+        @Override
+        public void run() {
+
+            //RECEIVE PACKET
+            try {
+
+                while (true) {
+                    multicastSocket.receive(packet_receiver);
+                    String message = new String(packet_receiver.getData(), packet_receiver.getOffset(), packet_receiver.getLength());
+                    System.out.println(message + " to everyone !");
+
+                    if (message == "break") {
+                        break;
+                    }
+
+                }
+            }
+            catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
         }
     }
 
