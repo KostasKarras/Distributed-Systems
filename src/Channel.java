@@ -1,6 +1,5 @@
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 
 public class Channel {
 
@@ -9,31 +8,33 @@ public class Channel {
     private HashMap<String, ArrayList<VideoFile>> hashtagVideoFilesMap;
     private int counterVideoID;
     private HashMap<Integer, VideoFile> ID_VideoFileMap;
+    private HashMap<Integer, String> ID_VideoNameMap;//OR ID_MetadataMap?
 
-    private HashMap<Integer, String> ID_VideoNameMap;
 
     /** Constructors */
 
     //For new users
-    public Channel(String channelName) {
+    public Channel (String channelName) {
         this.channelName = channelName;
         hashtagsPublished = new ArrayList<>();
         hashtagVideoFilesMap = new HashMap<>();
         counterVideoID = 0;
         ID_VideoFileMap = new HashMap<>();
         ID_VideoNameMap = new HashMap<>();
+
     }
 
     //To create existing channels
-    public Channel(String channelName, ArrayList<String> hashtagsPublished, HashMap<String, ArrayList<VideoFile>>
+    public Channel (String channelName, ArrayList<String> hashtagsPublished, HashMap<String, ArrayList<VideoFile>>
             hashtagVideoFilesMap, int counterVideoID, HashMap<Integer, VideoFile> ID_VideoFileMap,
-                   HashMap<Integer, String> ID_VideoNameMap) {
+                    HashMap<Integer, String> ID_VideoNameMap) {
         this.channelName = channelName;
         this.hashtagsPublished = hashtagsPublished;
         this.hashtagVideoFilesMap = hashtagVideoFilesMap;
         this.counterVideoID = counterVideoID;
         this.ID_VideoFileMap = ID_VideoFileMap;
         this.ID_VideoNameMap = ID_VideoNameMap;
+
     }
 
     public void addVideoFile(VideoFile video) {
@@ -76,6 +77,10 @@ public class Channel {
 
     /** Getters */
 
+    public ArrayList<String> getHashtagsPublished() {
+        return hashtagsPublished;
+    }
+
     public ArrayList<VideoFile> getVideoFiles_byHashtag(String hashtag) {
         return hashtagVideoFilesMap.get(hashtag);
     }
@@ -86,7 +91,7 @@ public class Channel {
 
     public HashMap<Integer, VideoFile> getChannelVideos(){
         return ID_VideoFileMap;
-    }
+    } //?????????????
 
     public HashMap<Integer, String> getChannelVideoNames() {
         return ID_VideoNameMap;
@@ -100,7 +105,4 @@ public class Channel {
     public void removeHashTag(String hashtag) {
         hashtagsPublished.remove(hashtag);
     }
-
-
-
 }

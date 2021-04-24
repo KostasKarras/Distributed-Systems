@@ -9,6 +9,7 @@ public class VideoFile {
     private int videoID;
     private String videoName;
 
+
     /** Constructor */
     public VideoFile (String filepath, ArrayList<String> associatedHashtags, String videoName) {
         this.filepath = filepath;
@@ -38,7 +39,7 @@ public class VideoFile {
         return this.filepath;
     }
 
-    public ArrayList<String> getAssociatedHashtags(){
+    public ArrayList<String> getAssociatedHashtags() {
         return associatedHashtags;
     }
 
@@ -46,16 +47,21 @@ public class VideoFile {
         return videoID;
     }
 
-    public String getVideoName(){
+    public String getVideoName() {
         return this.videoName;
     }
 
+
     /** Setters */
-    public void addAssociatedHashTags(String hashtag){
+    public void addAssociatedHashTags(String hashtag) {
         associatedHashtags.add(hashtag);
     }
 
     public void setVideoID(int videoID) {
         this.videoID = videoID;
+    }
+
+    public void setVideoName(String videoName) {
+        this.videoName = videoName;
     }
 }

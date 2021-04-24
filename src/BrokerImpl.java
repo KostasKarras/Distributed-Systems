@@ -1,5 +1,8 @@
-import javax.xml.crypto.Data;
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.math.BigInteger;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
@@ -9,7 +12,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.TreeMap;
-import java.util.function.ObjIntConsumer;
 
 public class BrokerImpl implements Broker{
 
@@ -20,48 +22,40 @@ public class BrokerImpl implements Broker{
     private static List<Broker> brokers = null;
     private static List<Consumer> registeredUsers = null;
     private static List<Publisher> registeredPublishers = null;
-    private static HashMap<String, ArrayList<SocketAddress>> brokerHashtags;
-
+    private static HashMap<String, ArrayList<String>> hashtagPublisherMap;//<hashtag, ArrayList socketAddress>?
     private static ServerSocket serverSocket;
-
-    //CHANGE
-    private static InetAddress userMulticastIP;
-        //We make brokerHashes treemap because we need hashes sorted in
-        //hashTopic in AppNode
-    static TreeMap<Integer, SocketAddress> brokerHashes;
+    private static HashMap<String, ArrayList<SocketAddress>> brokerHashtags;
+    private static TreeMap<Integer, SocketAddress> brokerHashes;
     private static HashMap<String, SocketAddress> brokerChannelNames;
-    //
+
 
     public static void main(String[] args) {
-        //TEST
         new BrokerImpl().initialize(4321);
     }
 
     @Override
     public void initialize(int port)  {
 
-        //CHANGE
         brokerHashtags = new HashMap<>();
         brokerChannelNames = new HashMap<>();
         brokerHashes = new TreeMap<>();
-        //CHANGE
+
+        //brokers.add(this);
 
         Socket connectionSocket = null;
 
         try {
             serverSocket = new ServerSocket(port);
 
-            //CHANGE
-            userMulticastIP = InetAddress.getByName("228.5.6.8");
-            //
-
             //HANDLE MULTICAST
             new Multicast_Handler().start();
+            //
 
             String serverSocketAddress = serverSocket.getLocalSocketAddress().toString();
             ID = String.format("Broker_%s", serverSocketAddress);
             brokerHash = calculateKeys(ID);
             brokerHashes.put(brokerHash, serverSocket.getLocalSocketAddress());
+            //notify other brokers for this ^^^^^
 
             while(true) {
                 connectionSocket = serverSocket.accept();
@@ -175,6 +169,7 @@ public class BrokerImpl implements Broker{
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
+
     }
 
     @Override
@@ -224,35 +219,40 @@ public class BrokerImpl implements Broker{
 
         public void run() {
 
-                try {
+            try {
+                int option = (int) objectInputStream.readObject();
+                // If-else statements and calling of specific acceptConnection.
 
-                    int option = (int) objectInputStream.readObject();;
-                    // If-else statements and calling of specific acceptConnection.
+                /** Node Requests Handle */
+                if (option == 0) {  // Get Brokers
 
-                    /** Node Requests Handle */
-                    if (option == 0) {  // Get Brokers
+                }
 
-                    }
+                /** Consumer - User Requests Handle */
+                else if (option == 1) {  // Register User
 
-                    /** Consumer - User Requests Handle */
-                    else if (option == 1) {  // Register User
+                } else if (option == 2) {  // Get Topic Video List
 
-                    } else if (option == 2) {  // Get Topic Video List*
+                } else if (option == 3) {  // Play Data
 
-                    } else if (option == 3) {  // Play Data*
+                }
 
-                    }
+                /** Publisher Requests Handle */
+                else if (option == 4) {  // Hash Topic?
 
-                    /** Publisher Requests Handle */
-                    else if (option == 4) {  // Hash Topic?
+                } else if (option == 5) {  // Push?
 
-                    } else if (option == 5) {  // Push?
+                } else if (option == 6) {  // Notify Failure?
 
-                    } else if (option == 6) {  // Notify Failure?
+                } else if (option == 7) {  // Notify Brokers for Hashtags
+                    /**KOSTAS-START*/
+                    String newHashtag = (String) objectInputStream.readObject();
 
-                    } else if (option == 7) {  // Notify Brokers for Hashtags
-
-                    }
+                    //To key tou hashtag tha einai ylopoihmeno apo thn hashTopic!!!
+                    int key = calculateKeys(newHashtag);
+                    /**KOSTAS-END*/
+                    //Thelei ylopoihsh
+                }
 
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
@@ -309,7 +309,7 @@ public class BrokerImpl implements Broker{
                     ioException.printStackTrace();
                 }
             }
-        }   
+        }
     }
 
     /** A Thread subclass to handle broker communication */
@@ -353,7 +353,7 @@ public class BrokerImpl implements Broker{
                     String message = new String(packet_receiver.getData(), packet_receiver.getOffset(), packet_receiver.getLength());
                     System.out.println(message);
 
-                    if (message == "break") {
+                    if (message.equals("break")) {
                         break;
                     }
 
