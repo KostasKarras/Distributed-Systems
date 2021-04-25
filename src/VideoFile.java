@@ -1,4 +1,6 @@
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 
 public class VideoFile {
@@ -6,14 +8,15 @@ public class VideoFile {
     /** Class Variables */
     private String filepath;
     private ArrayList<String> associatedHashtags;
-    private String videoName;
     private int videoID;
+    private String videoName;
+
 
     /** Constructor */
-    public VideoFile (String filepath, ArrayList<String> associatedHashtags) {
+    public VideoFile (String filepath, ArrayList<String> associatedHashtags, String videoName) {
         this.filepath = filepath;
         this.associatedHashtags = associatedHashtags;
-        this.videoName = filepath;
+        this.videoName = videoName;
     }
 
     public byte[] getVideoFileChunk() {
@@ -38,7 +41,7 @@ public class VideoFile {
         return this.filepath;
     }
 
-    public ArrayList<String> getAssociatedHashtags(){
+    public ArrayList<String> getAssociatedHashtags() {
         return associatedHashtags;
     }
 
@@ -46,18 +49,21 @@ public class VideoFile {
         return videoID;
     }
 
-    /**KOSTAS-START*/
-    public String getVideoName(){
+    public String getVideoName() {
         return this.videoName;
     }
-    /**KOSTAS-END*/
+
 
     /** Setters */
-    public void addAssociatedHashTags(String hashtag){
-        this.associatedHashtags.add(hashtag);
+    public void addAssociatedHashTags(String hashtag) {
+        associatedHashtags.add(hashtag);
     }
 
     public void setVideoID(int videoID) {
         this.videoID = videoID;
+    }
+
+    public void setVideoName(String videoName) {
+        this.videoName = videoName;
     }
 }
