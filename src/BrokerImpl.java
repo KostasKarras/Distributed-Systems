@@ -1,4 +1,8 @@
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.math.BigInteger;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
@@ -7,6 +11,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.TreeMap;
 
 public class BrokerImpl implements Broker{
 
@@ -17,8 +22,12 @@ public class BrokerImpl implements Broker{
     private static List<Broker> brokers = null;
     private static List<Consumer> registeredUsers = null;
     private static List<Publisher> registeredPublishers = null;
-    private static HashMap<String, String> brokerHashtags;
+    private static HashMap<String, ArrayList<String>> hashtagPublisherMap;//<hashtag, ArrayList socketAddress>?
     private static ServerSocket serverSocket;
+    private static HashMap<String, ArrayList<SocketAddress>> brokerHashtags;
+    private static TreeMap<Integer, SocketAddress> brokerHashes;
+    private static HashMap<String, SocketAddress> brokerChannelNames;
+
 
     public static void main(String[] args) {
         new BrokerImpl().initialize(4321);
@@ -28,6 +37,8 @@ public class BrokerImpl implements Broker{
     public void initialize(int port)  {
 
         brokerHashtags = new HashMap<>();
+        brokerChannelNames = new HashMap<>();
+        brokerHashes = new TreeMap<>();
 
         //brokers.add(this);
 
@@ -42,7 +53,9 @@ public class BrokerImpl implements Broker{
 
             String serverSocketAddress = serverSocket.getLocalSocketAddress().toString();
             ID = String.format("Broker_%s", serverSocketAddress);
-            int brokerHash = calculateKeys(ID);
+            brokerHash = calculateKeys(ID);
+            brokerHashes.put(brokerHash, serverSocket.getLocalSocketAddress());
+            //notify other brokers for this ^^^^^
 
             while(true) {
                 connectionSocket = serverSocket.accept();
@@ -105,6 +118,58 @@ public class BrokerImpl implements Broker{
     @Override
     public void pull(String channel_or_hashtag) {
 
+        SocketAddress publisherAddress; //For channel names
+        ArrayList<SocketAddress> addresses; // For hashtags (many channels)
+        String[] ipPort;
+        InetAddress publisher_ip;
+        int publisher_port;
+        Socket pullSocket;
+        ObjectOutputStream objectOutputStream;
+        ObjectInputStream objectInputStream;
+        HashMap<Integer, String> channelVideoList;
+
+        //Check if this is channel name or hashtag
+        try {
+            if (channel_or_hashtag.charAt(0) == '#') {
+                addresses = brokerHashtags.get(channel_or_hashtag);
+                for (SocketAddress address : addresses) {
+                    //Generate a thread for each address
+                }
+            }
+            else {
+                publisherAddress = brokerChannelNames.get(channel_or_hashtag);
+
+                //Split ip and port from address
+                ipPort = publisherAddress.toString().split(":");
+                publisher_ip = InetAddress.getByName(ipPort[0].substring(1));
+                publisher_port = Integer.parseInt(ipPort[1]);
+
+                //Make connection with client
+                pullSocket = new Socket(publisher_ip, publisher_port);
+                objectInputStream = new ObjectInputStream(pullSocket.getInputStream());
+                objectOutputStream = new ObjectOutputStream(pullSocket.getOutputStream());
+
+                //Give option code
+                objectOutputStream.writeObject(1);
+                objectOutputStream.flush();
+
+                //Give operation
+                objectOutputStream.writeObject("CHANNEL");
+                objectOutputStream.flush();
+
+                //Store channel videos
+                channelVideoList = (HashMap<Integer, String>) objectInputStream.readObject();
+                System.out.println(channelVideoList);
+
+            }
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
     }
 
     @Override
@@ -154,38 +219,44 @@ public class BrokerImpl implements Broker{
 
         public void run() {
 
-                try {
-                        int option = (int) objectInputStream.readObject();;
-                        // If-else statements and calling of specific acceptConnection.
+            try {
+                int option = (int) objectInputStream.readObject();
+                // If-else statements and calling of specific acceptConnection.
 
-                        /** Node Requests Handle */
-                        if (option == 0) {  // Get Brokers
+                /** Node Requests Handle */
+                if (option == 0) {  // Get Brokers
 
-                        }
-
-                        /** Consumer - User Requests Handle */
-                        else if (option == 1) {  // Register User
-                            
-                        } else if (option == 2) {  // Get Topic Video List*
-
-                        } else if (option == 3) {  // Play Data*
-
-                        }
-                        
-                        /** Publisher Requests Handle */
-                        else if (option == 4) {  // Hash Topic?
-
-                        } else if (option == 5) {  // Push?
-
-                        } else if (option == 6) {  // Notify Failure?
-
-                        } else if (option == 7) {  // Notify Brokers for Hashtags
-
-                        }
-
-                } catch (IOException | ClassNotFoundException e) {
-                    e.printStackTrace();
                 }
+
+                /** Consumer - User Requests Handle */
+                else if (option == 1) {  // Register User
+
+                } else if (option == 2) {  // Get Topic Video List
+
+                } else if (option == 3) {  // Play Data
+
+                }
+
+                /** Publisher Requests Handle */
+                else if (option == 4) {  // Hash Topic?
+
+                } else if (option == 5) {  // Push?
+
+                } else if (option == 6) {  // Notify Failure?
+
+                } else if (option == 7) {  // Notify Brokers for Hashtags
+                    /**KOSTAS-START*/
+                    String newHashtag = (String) objectInputStream.readObject();
+
+                    //To key tou hashtag tha einai ylopoihmeno apo thn hashTopic!!!
+                    int key = calculateKeys(newHashtag);
+                    /**KOSTAS-END*/
+                    //Thelei ylopoihsh
+                }
+
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            }
         }
 
         public void handle_push() {
@@ -238,7 +309,7 @@ public class BrokerImpl implements Broker{
                     ioException.printStackTrace();
                 }
             }
-        }   
+        }
     }
 
     /** A Thread subclass to handle broker communication */
@@ -253,7 +324,7 @@ public class BrokerImpl implements Broker{
 
                 //INITIALIZE MULTICAST SOCKET
                 int multicastPort = 5000;
-                InetAddress brokerIP = InetAddress.getByName("192.168.2.51");
+                InetAddress brokerIP = InetAddress.getByName("192.168.2.54");
                 SocketAddress multicastSocketAddress = new InetSocketAddress(brokerIP, multicastPort);
                 multicastSocket = new MulticastSocket(multicastSocketAddress);
 
@@ -282,7 +353,7 @@ public class BrokerImpl implements Broker{
                     String message = new String(packet_receiver.getData(), packet_receiver.getOffset(), packet_receiver.getLength());
                     System.out.println(message);
 
-                    if (message == "break") {
+                    if (message.equals("break")) {
                         break;
                     }
 
