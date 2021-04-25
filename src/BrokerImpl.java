@@ -11,12 +11,14 @@ import java.net.MulticastSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.TreeMap;
 
 public class BrokerImpl implements Broker{
 
@@ -27,11 +29,12 @@ public class BrokerImpl implements Broker{
     private static List<Broker> brokers = null;
     private static List<Consumer> registeredUsers = null;
     private static List<Publisher> registeredPublishers = null;
-    /**KOSTAS-START*/
-    private static HashMap<Integer, String> brokerHashtags;//14152163, serverSocketAddress
-    private static HashMap<String, ArrayList<String>> hashtagPublisherMap;//#TIPOTA, (...->publisher1->publisher2->...)/socketAddress
-    /**KOSTAS-END*/
+    private static HashMap<String, ArrayList<String>> hashtagPublisherMap;//<hashtag, ArrayList socketAddress>?
     private static ServerSocket serverSocket;
+    private static HashMap<String, ArrayList<SocketAddress>> brokerHashtags;
+    private static TreeMap<Integer, SocketAddress> brokerHashes;
+    private static HashMap<String, SocketAddress> brokerChannelNames;
+
 
     public static void main(String[] args) {
         new BrokerImpl().initialize(4321);
@@ -41,6 +44,8 @@ public class BrokerImpl implements Broker{
     public void initialize(int port)  {
 
         brokerHashtags = new HashMap<>();
+        brokerChannelNames = new HashMap<>();
+        brokerHashes = new TreeMap<>();
 
         //brokers.add(this);
 
@@ -56,8 +61,8 @@ public class BrokerImpl implements Broker{
             String serverSocketAddress = serverSocket.getLocalSocketAddress().toString();
             ID = String.format("Broker_%s", serverSocketAddress);
             brokerHash = calculateKeys(ID);
-            /**KOSTAS*/
-            brokerHashtags.put(brokerHash, serverSocketAddress);
+            brokerHashes.put(brokerHash, serverSocket.getLocalSocketAddress());
+            //notify other brokers for this ^^^^^
 
             while(true) {
                 connectionSocket = serverSocket.accept();
@@ -67,7 +72,8 @@ public class BrokerImpl implements Broker{
         } catch(IOException e) {
             /* Crash the server if IO fails. Something bad has happened. */
             throw new RuntimeException("Could not create ServerSocket ", e);
-        } finally {
+        }
+        finally {
             try {
                 serverSocket.close();
             } catch (IOException ioException) {
@@ -119,6 +125,58 @@ public class BrokerImpl implements Broker{
     @Override
     public void pull(String channel_or_hashtag) {
 
+        SocketAddress publisherAddress; //For channel names
+        ArrayList<SocketAddress> addresses; // For hashtags (many channels)
+        String[] ipPort;
+        InetAddress publisher_ip;
+        int publisher_port;
+        Socket pullSocket;
+        ObjectOutputStream objectOutputStream;
+        ObjectInputStream objectInputStream;
+        HashMap<Integer, String> channelVideoList;
+
+        //Check if this is channel name or hashtag
+        try {
+            if (channel_or_hashtag.charAt(0) == '#') {
+                addresses = brokerHashtags.get(channel_or_hashtag);
+                for (SocketAddress address : addresses) {
+                    //Generate a thread for each address
+                }
+            }
+            else {
+                publisherAddress = brokerChannelNames.get(channel_or_hashtag);
+
+                //Split ip and port from address
+                ipPort = publisherAddress.toString().split(":");
+                publisher_ip = InetAddress.getByName(ipPort[0].substring(1));
+                publisher_port = Integer.parseInt(ipPort[1]);
+
+                //Make connection with client
+                pullSocket = new Socket(publisher_ip, publisher_port);
+                objectInputStream = new ObjectInputStream(pullSocket.getInputStream());
+                objectOutputStream = new ObjectOutputStream(pullSocket.getOutputStream());
+
+                //Give option code
+                objectOutputStream.writeObject(1);
+                objectOutputStream.flush();
+
+                //Give operation
+                objectOutputStream.writeObject("CHANNEL");
+                objectOutputStream.flush();
+
+                //Store channel videos
+                channelVideoList = (HashMap<Integer, String>) objectInputStream.readObject();
+                System.out.println(channelVideoList);
+
+            }
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
     }
 
     @Override
@@ -158,7 +216,7 @@ public class BrokerImpl implements Broker{
             socket = s;
             threadNumber = current_thread;
             setName("Thread " + threadNumber);
-                try {
+            try {
                 objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
                 objectInputStream = new ObjectInputStream(socket.getInputStream());
             } catch (IOException e) {
@@ -175,13 +233,19 @@ public class BrokerImpl implements Broker{
                 /** Node Requests Handle */
                 if (option == 0) {  // Get Brokers
 
-                }else if (option == 1) {  // Register User
+                }
 
-                } else if (option == 2) {  // Get Topic Video List*
+                /** Consumer - User Requests Handle */
+                else if (option == 1) {  // Register User
 
-                } else if (option == 3) {  // Play Data*
+                } else if (option == 2) {  // Get Topic Video List
 
-                } else if (option == 4) {  // Hash Topic?
+                } else if (option == 3) {  // Play Data
+
+                }
+
+                /** Publisher Requests Handle */
+                else if (option == 4) {  // Hash Topic?
 
                 } else if (option == 5) {  // Push?
 
@@ -191,12 +255,10 @@ public class BrokerImpl implements Broker{
                     /**KOSTAS-START*/
                     String newHashtag = (String) objectInputStream.readObject();
 
-
+                    //To key tou hashtag tha einai ylopoihmeno apo thn hashTopic!!!
                     int key = calculateKeys(newHashtag);
-                    ArrayList<String> hashtags = new ArrayList<String>();
-                    hashtags.add(newHashtag);
-                    //hashtagPublisherMap.put("Publisher1", hashtags);
                     /**KOSTAS-END*/
+                    //Thelei ylopoihsh
                 }
 
             } catch (IOException | ClassNotFoundException e) {
@@ -206,6 +268,7 @@ public class BrokerImpl implements Broker{
 
         public void handle_push() {
             try {
+
                 String message;
                 message = (String) objectInputStream.readObject();
                 if(message.equals("I want to push a new video!"))
@@ -230,7 +293,7 @@ public class BrokerImpl implements Broker{
                 System.out.println("My Arraylist size: " + chunks.size());
 
                 try {
-                    File nf = new File("C:/Users/Kostas/Desktop/test.mp4");
+                    File nf = new File("C:/Users/miked/Desktop/test.mp4");
                     for (byte[] ar : chunks) {
                         FileOutputStream fw = new FileOutputStream(nf, true);
                         try {
@@ -280,7 +343,8 @@ public class BrokerImpl implements Broker{
                 byte buf[] = new byte[1000];
                 packet_receiver = new DatagramPacket(buf, buf.length);
 
-            } catch (IOException ioException) {
+            }
+            catch (IOException ioException) {
                 ioException.printStackTrace();
             }
         }
@@ -296,12 +360,13 @@ public class BrokerImpl implements Broker{
                     String message = new String(packet_receiver.getData(), packet_receiver.getOffset(), packet_receiver.getLength());
                     System.out.println(message);
 
-                    if (message == "break") {
+                    if (message.equals("break")) {
                         break;
                     }
 
                 }
-            } catch (IOException ioException) {
+            }
+            catch (IOException ioException) {
                 ioException.printStackTrace();
             }
         }
