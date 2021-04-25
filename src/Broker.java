@@ -1,3 +1,4 @@
+import java.util.HashMap;
 import java.util.List;
 
 interface Broker extends Node{
@@ -15,7 +16,7 @@ interface Broker extends Node{
 
     public void notifyBrokersOnChanges();
 
-    public void pull(String channel_or_hashtag);
+    public HashMap<Integer, String> pull(String channel_or_hashtag);
 
     public void filterConsumers( );
 }

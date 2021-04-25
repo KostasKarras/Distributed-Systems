@@ -10,6 +10,9 @@ public class Channel {
     private HashMap<Integer, VideoFile> ID_VideoFileMap;
     private HashMap<Integer, String> ID_VideoNameMap;//OR ID_MetadataMap?
 
+    //MICHAEL HASHMAPS - NEED OF EXPLANATION
+    //
+
 
     /** Constructors */
 
@@ -97,6 +100,24 @@ public class Channel {
         return ID_VideoNameMap;
     }
 
+    public HashMap<ChannelKey, String> getChannelVideoNamesByHashtag(String hashtag) {
+
+        //We store a hashmap with all videos that have specific hashtag.
+        //Key is the video id, Value is videoName (we might change it to metadata)
+        HashMap<ChannelKey, String> hashtagVideosHashmap = new HashMap<>();
+
+        //Get all files with specific hashtag
+        ArrayList<VideoFile> hashtag_files = hashtagVideoFilesMap.get(hashtag);
+
+        //Get hashmap needed
+        for (VideoFile video : hashtag_files) {
+            hashtagVideosHashmap.put(new ChannelKey(channelName, video.getVideoID()), video.getVideoName());
+        }
+
+        return hashtagVideosHashmap;
+
+    }
+
     /** Setters */
     public void addHashTag(String hashtag) {
         hashtagsPublished.add(hashtag);
@@ -104,5 +125,43 @@ public class Channel {
 
     public void removeHashTag(String hashtag) {
         hashtagsPublished.remove(hashtag);
+    }
+
+    /** Channel Key
+     * This class is used to represent keys for HashMaps
+     * with two values : channel Name and id.
+     * Broker needs to know which channel name sent which videos
+     * and that would be impossible using only video id as a key
+     * to our Hashmap
+     * */
+    public class ChannelKey {
+
+        private final String channelName;
+        private final int videoID;
+
+        ChannelKey(String channelName, int videoID) {
+            this.channelName = channelName;
+            this.videoID = videoID;
+        }
+
+        @Override
+        public boolean equals(Object newKey) {
+
+            if (this == newKey) {return true;}
+            if (!(newKey instanceof ChannelKey)) {return false;}
+            ChannelKey key = (ChannelKey) newKey;
+            return channelName.equals(key.channelName) && videoID == key.videoID;
+        }
+
+        @Override
+        public int hashCode() {
+            return channelName.hashCode() + videoID;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("Channel Name : %s, Video Id : %d", channelName, videoID);
+        }
+
     }
 }

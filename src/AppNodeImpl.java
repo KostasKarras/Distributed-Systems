@@ -227,20 +227,14 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     }
 
-    public void sendChannelVideoList(ServeRequest serveRequest) {
-        try{
-            serveRequest.objectOutputStream.writeObject(channel.getChannelVideoNames());
-            /*
-            HashMap<Integer, String> test = new HashMap<>();
-            test.put(10, "Michalis");
-            test.put(20, "George");
-            test.put(30, "Grace");
-            serveRequest.objectOutputStream.writeObject(test);
-            */
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
-        }
+    public HashMap<Integer, String> getChannelVideoMap() {
+        return channel.getChannelVideoNames();
     }
+
+    public HashMap<Channel.ChannelKey, String> getHashtagVideoMap(String hashtag) {
+        return channel.getChannelVideoNamesByHashtag(hashtag);
+    }
+
 
     //CHANGES HAVE BEEN MADE
     class RequestHandler extends Thread {
@@ -303,9 +297,12 @@ public class AppNodeImpl implements Publisher, Consumer{
                     String choice = (String) objectInputStream.readObject();
                     System.out.println(choice);
                     if (choice.equals("CHANNEL")) {
-                        sendChannelVideoList(this);
+                        HashMap<Integer, String> videoList = getChannelVideoMap();
+                        objectOutputStream.writeObject(videoList);
                     }
                     else {
+                        HashMap<Channel.ChannelKey, String> videoList = getHashtagVideoMap(choice);
+                        objectOutputStream.writeObject(videoList);
                     }
 
                 } else if (option == 2) { // Notify Publisher (Broker sends Publisher the keys he is responsible for)
