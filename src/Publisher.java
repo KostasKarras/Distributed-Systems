@@ -1,9 +1,10 @@
 import java.util.ArrayList;
 import java.util.List;
+import java.net.SocketAddress;
 
 interface Publisher extends Node{
 
-    static final ChannelName channelName = null;
+    static final Channel channel = null;
 
     public void addHashTag(String hashtag);
 
@@ -11,7 +12,7 @@ interface Publisher extends Node{
 
     public List<Broker> getBrokerList();
 
-    public Broker hashTopic(String hashtopic);
+    public SocketAddress hashTopic(String hashtopic);
 
     public void push(String hashtags, VideoFile video);
 
