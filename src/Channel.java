@@ -1,38 +1,48 @@
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
-public class ChannelName {
+public class Channel {
 
     private String channelName;
     private ArrayList<String> hashtagsPublished;
     private HashMap<String, ArrayList<VideoFile>> hashtagVideoFilesMap;
     private int counterVideoID;
     private HashMap<Integer, VideoFile> ID_VideoFileMap;
+    private HashMap<Integer, String> ID_VideoNameMap;//OR ID_MetadataMap?
+
 
     /** Constructors */
 
     //For new users
-    public ChannelName (String channelName) {
+    public Channel (String channelName) {
         this.channelName = channelName;
         hashtagsPublished = new ArrayList<>();
         hashtagVideoFilesMap = new HashMap<>();
         counterVideoID = 0;
         ID_VideoFileMap = new HashMap<>();
+        ID_VideoNameMap = new HashMap<>();
+
     }
 
     //To create existing channels
-    public ChannelName (String channelName, ArrayList<String> hashtagsPublished, HashMap<String, ArrayList<VideoFile>>
-            hashtagVideoFilesMap, int counterVideoID, HashMap<Integer, VideoFile> ID_VideoFileMap) {
+    public Channel (String channelName, ArrayList<String> hashtagsPublished, HashMap<String, ArrayList<VideoFile>>
+            hashtagVideoFilesMap, int counterVideoID, HashMap<Integer, VideoFile> ID_VideoFileMap,
+                    HashMap<Integer, String> ID_VideoNameMap) {
         this.channelName = channelName;
         this.hashtagsPublished = hashtagsPublished;
         this.hashtagVideoFilesMap = hashtagVideoFilesMap;
         this.counterVideoID = counterVideoID;
         this.ID_VideoFileMap = ID_VideoFileMap;
+        this.ID_VideoNameMap = ID_VideoNameMap;
+
     }
 
     public void addVideoFile(VideoFile video) {
+        System.out.println("I AM ADDING YOUR VIDEO!!!");
         video.setVideoID(counterVideoID);
         ID_VideoFileMap.put(counterVideoID, video);
+        ID_VideoNameMap.put(counterVideoID, video.getVideoName());
         counterVideoID++;
 
         ArrayList<String> hashtags = video.getAssociatedHashtags();
@@ -53,6 +63,7 @@ public class ChannelName {
 
     public void removeVideoFile(VideoFile video) {
         ID_VideoFileMap.remove(video.getVideoID());
+        ID_VideoNameMap.remove(video.getVideoID());
 
         ArrayList<String> hashtags = video.getAssociatedHashtags();
         for (String hashtag : hashtags) {
@@ -68,6 +79,10 @@ public class ChannelName {
 
     /** Getters */
 
+    public ArrayList<String> getHashtagsPublished() {
+        return hashtagsPublished;
+    }
+
     public ArrayList<VideoFile> getVideoFiles_byHashtag(String hashtag) {
         return hashtagVideoFilesMap.get(hashtag);
     }
@@ -75,11 +90,23 @@ public class ChannelName {
     public VideoFile getVideoFile_byID (int ID) {
         return ID_VideoFileMap.get(ID);
     }
-    /**KOSTAS-START*/
-    public HashMap<Integer, VideoFile> getChannelVideos(){
-        return this.ID_VideoFileMap;
+
+    public HashMap<String, ArrayList<VideoFile>> getHashtagVideoFilesMap(){
+        return hashtagVideoFilesMap;
     }
-    /**KOSTAS-END*/
+
+    public HashMap<Integer, String> getChannelVideoNames() {
+        return ID_VideoNameMap;
+    }
+
+    public int getKeyFromValue(HashMap<Integer, String> hm, String value) {
+        for (Map.Entry<Integer, String> item : hm.entrySet()) {
+            if (item.getValue().equals(value)) {
+                return item.getKey();
+            }
+        }
+        return -1;
+    }
 
     /** Setters */
     public void addHashTag(String hashtag) {
