@@ -37,7 +37,7 @@ public class Channel {
 
     }
 
-    public void addVideoFile(VideoFile video) {
+    public void addVideoFile(VideoFile video, AppNodeImpl appNode) {
         video.setVideoID(counterVideoID);
         ID_VideoFileMap.put(counterVideoID, video);
         ID_VideoNameMap.put(counterVideoID, video.getVideoName());
@@ -54,12 +54,13 @@ public class Channel {
                 value.add(video);
                 hashtagVideoFilesMap.put(hashtag, value);
 
-                this.addHashTag(hashtag);
+                hashtagsPublished.add(hashtag);
+                appNode.notifyBrokersForHashTags(hashtag);
             }
         }
     }
 
-    public void removeVideoFile(VideoFile video) {
+    public void removeVideoFile(VideoFile video, AppNodeImpl appNode) {
         ID_VideoFileMap.remove(video.getVideoID());
         ID_VideoNameMap.remove(video.getVideoID());
 
@@ -67,11 +68,60 @@ public class Channel {
         for (String hashtag : hashtags) {
             if (hashtagVideoFilesMap.get(hashtag).size() == 1) {
                 hashtagVideoFilesMap.remove(hashtag);
+
+                hashtagsPublished.remove(hashtag);
+                appNode.notifyBrokersForHashTags(hashtag);
             } else {
                 ArrayList<VideoFile> value = hashtagVideoFilesMap.get(hashtag);
                 value.remove(video);
                 hashtagVideoFilesMap.put(hashtag, value);
             }
+        }
+    }
+
+    public void updateVideoFile(VideoFile video, ArrayList<String> hashtags, String method, AppNodeImpl appNode) {
+        if (method == "ADD") {
+            for (String hashtag : hashtags) {
+                video.addHashtag(hashtag);
+                if (hashtagsPublished.contains(hashtag)) {
+                    // Add video to the hashtagVideoFilesMap.
+                    ArrayList<VideoFile> associatedVideos = getVideoFiles_byHashtag(hashtag);
+                    associatedVideos.add(video);
+                    hashtagVideoFilesMap.put(hashtag, associatedVideos);
+                } else {
+                    // Add video to the hashtagVideoFilesMap.
+                    ArrayList<VideoFile> associatedVideos = new ArrayList<>();
+                    associatedVideos.add(video);
+                    hashtagVideoFilesMap.put(hashtag, associatedVideos);
+
+                    // Add hashtag to the channel's Published Hashtags.
+                    hashtagsPublished.add(hashtag);
+                    // Brokers notification needed about new hashtag in channel.
+                    appNode.notifyBrokersForHashTags(hashtag);
+                }
+            }
+        } else if (method == "REMOVE") {
+            for (String hashtag : hashtags) {
+                video.removeHashtag(hashtag);
+                if (getVideoFiles_byHashtag(hashtag).size() > 1) {
+                    // Remove video from the hashtagVideoFilesMap.
+                    ArrayList<VideoFile> associatedVideos = getVideoFiles_byHashtag(hashtag);
+                    associatedVideos.remove(video);
+                    hashtagVideoFilesMap.put(hashtag, associatedVideos);
+                } else {
+                    // Remove video from the hashtagVideoFilesMap.
+                    ArrayList<VideoFile> associatedVideos = new ArrayList<>();
+                    associatedVideos.add(video);
+                    hashtagVideoFilesMap.put(hashtag, associatedVideos);
+
+                    // Remove hashtag from the channel's Published Hashtags.
+                    hashtagsPublished.remove(hashtag);
+                    // Brokers notification needed about new hashtag in channel.
+                    appNode.notifyBrokersForHashTags(hashtag);
+                }
+            }
+        } else {
+            System.out.println("MAJOR ERROR");
         }
     }
 
@@ -88,10 +138,6 @@ public class Channel {
     public VideoFile getVideoFile_byID (int ID) {
         return ID_VideoFileMap.get(ID);
     }
-
-    public HashMap<Integer, VideoFile> getChannelVideos(){
-        return ID_VideoFileMap;
-    } //?????????????
 
     public HashMap<Integer, String> getChannelVideoNames() {
         return ID_VideoNameMap;
