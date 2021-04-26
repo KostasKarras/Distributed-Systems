@@ -18,14 +18,31 @@ public class AppNodeImpl implements Publisher, Consumer{
     //
 
     public static void main(String[] args) {
+
         new AppNodeImpl().initialize(4321);
     }
 
     @Override
     public void initialize(int port) {
 
-
         channel = new Channel("USER");
+
+        //TEST CODE
+
+        ArrayList<String> videoHashtags = new ArrayList<>();
+        videoHashtags.add("#music");
+        videoHashtags.add("#LinkingPark");
+        VideoFile testvideo = new VideoFile
+                ("C:\\Users\\miked\\Videos\\Captures\\Numb (Official Video) - Linkin Park - YouTube - Google Chrome 2020-04-03 14-10-06.mp4",
+                        videoHashtags, "Numb video clip!");
+        channel.addVideoFile(testvideo);
+        connect();
+        try {
+            objectOutputStream.writeObject(2);
+            objectOutputStream.writeObject("#LinkingPark");
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        }
 
         new RequestHandler().start();
 
@@ -228,10 +245,16 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
     public HashMap<Integer, String> getChannelVideoMap() {
-        return channel.getChannelVideoNames();
+        //return channel.getChannelVideoNames();
+        HashMap<Integer,String> test = new HashMap<>();
+        test.put(10, "Michael");
+        test.put(20, "George");
+        test.put(30, "My lovely Grace");
+        System.out.println(test);
+        return test;
     }
 
-    public HashMap<Channel.ChannelKey, String> getHashtagVideoMap(String hashtag) {
+    public HashMap<ChannelKey, String> getHashtagVideoMap(String hashtag) {
         return channel.getChannelVideoNamesByHashtag(hashtag);
     }
 
@@ -275,7 +298,7 @@ public class AppNodeImpl implements Publisher, Consumer{
         private ObjectOutputStream objectOutputStream;
 
         ServeRequest(Socket s, int currentThreads) {
-            requestSocket = s;
+            socket = s;
             threadNumber = currentThreads;
             setName("Thread " + threadNumber);
             try {
@@ -301,7 +324,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                         objectOutputStream.writeObject(videoList);
                     }
                     else {
-                        HashMap<Channel.ChannelKey, String> videoList = getHashtagVideoMap(choice);
+                        HashMap<ChannelKey, String> videoList = getHashtagVideoMap(choice);
                         objectOutputStream.writeObject(videoList);
                     }
 

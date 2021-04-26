@@ -8,11 +8,9 @@ import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.stream.IntStream;
 
 public class BrokerImpl implements Broker{
 
@@ -31,10 +29,11 @@ public class BrokerImpl implements Broker{
 
     private static InetAddress userMulticastIP;
 
-
     public static void main(String[] args) {
+
         new BrokerImpl().initialize(4321);
     }
+
 
     @Override
     public void initialize(int port)  {
@@ -122,62 +121,7 @@ public class BrokerImpl implements Broker{
 
     @Override
     public HashMap<Integer, String> pull(String channel_or_hashtag) {
-
-        SocketAddress publisherAddress; //For channel names
-        ArrayList<SocketAddress> addresses; // For hashtags (many channels)
-        String[] ipPort;
-        InetAddress publisher_ip;
-        int publisher_port;
-        Socket pullSocket;
-        ObjectOutputStream objectOutputStream;
-        ObjectInputStream objectInputStream;
-        HashMap<Integer, String> channelVideoList = null;
-
-        //Check if this is channel name or hashtag
-        try {
-            if (channel_or_hashtag.charAt(0) == '#') {
-                //This map is useful for threaded applications
-                ConcurrentHashMap<Channel.ChannelKey, String> hashtagVideoList = new ConcurrentHashMap<>();
-                addresses = brokerHashtags.get(channel_or_hashtag);
-                for (SocketAddress address : addresses) {
-                    new BrokerAction(channel_or_hashtag, address).start();
-                }
-            }
-            else {
-                publisherAddress = brokerChannelNames.get(channel_or_hashtag);
-
-                //Split ip and port from address
-                ipPort = publisherAddress.toString().split(":");
-                publisher_ip = InetAddress.getByName(ipPort[0].substring(1));
-                publisher_port = Integer.parseInt(ipPort[1]);
-
-                //Make connection with client
-                pullSocket = new Socket(publisher_ip, publisher_port);
-                objectInputStream = new ObjectInputStream(pullSocket.getInputStream());
-                objectOutputStream = new ObjectOutputStream(pullSocket.getOutputStream());
-
-                //Give option code
-                objectOutputStream.writeObject(1);
-                objectOutputStream.flush();
-
-                //Give operation
-                objectOutputStream.writeObject("CHANNEL");
-                objectOutputStream.flush();
-
-                //Store channel videos
-                channelVideoList = (HashMap<Integer, String>) objectInputStream.readObject();
-                System.out.println(channelVideoList);
-
-                //Close connections
-                objectInputStream.close();
-                objectOutputStream.close();
-                pullSocket.close();
-            }
-        } catch (ClassNotFoundException | IOException e) {
-            e.printStackTrace();
-        }
-        return channelVideoList;
-
+        return null;
     }
 
     @Override
@@ -240,6 +184,29 @@ public class BrokerImpl implements Broker{
                 else if (option == 1) {  // Register User
 
                 } else if (option == 2) {  // Get Topic Video List
+
+                    PullOperation pull_operation = new PullOperation();
+
+                    String channel_or_hashtag = (String) objectInputStream.readObject();
+
+                    if (channel_or_hashtag.charAt(0) == '#') {
+                        //TEST CODE
+                        ArrayList<SocketAddress> hashtagRelatedChannels= new ArrayList<>();
+                        hashtagRelatedChannels.add(socket.getRemoteSocketAddress());
+                        brokerHashtags.put(channel_or_hashtag, hashtagRelatedChannels);
+                        //
+                        ArrayList<SocketAddress> addresses = brokerHashtags.get(channel_or_hashtag);
+                        System.out.println("0 : " + addresses);
+                        HashMap<ChannelKey, String> hashtagVideoList =
+                                pull_operation.pullHashtags(channel_or_hashtag, addresses);
+                        System.out.println(hashtagVideoList);
+                    }
+                    else {
+                        SocketAddress publisherAddress = brokerChannelNames.get(channel_or_hashtag);
+                        HashMap<Integer, String> channelVideoList =
+                                pull_operation.pullChannel(publisherAddress);
+                        System.out.println(channelVideoList);
+                    }
 
                 } else if (option == 3) {  // Play Data
 
@@ -373,61 +340,5 @@ public class BrokerImpl implements Broker{
         }
     }
 
-    class BrokerAction extends Thread{
 
-        private final String hashtag;
-        public SocketAddress address;
-        public InetAddress publisher_ip;
-        public int publisher_port;
-
-        /** Constructor */
-        public BrokerAction(String hashtag, SocketAddress address) {
-            this.hashtag = hashtag;
-            this.address = address;
-            try {
-                String[] ipPort = address.toString().split(":");
-                publisher_ip = InetAddress.getByName(ipPort[0].substring(1));
-                publisher_port = Integer.parseInt(ipPort[1]);
-            } catch (UnknownHostException e) {
-                e.printStackTrace();
-            }
-        }
-
-        /** Run thread */
-        @Override
-        public void run() {
-
-            //Pull functionality
-
-            try {
-
-                //Make connection with client
-                Socket pullSocket = new Socket(publisher_ip, publisher_port);
-                ObjectInputStream objectInputStream = new ObjectInputStream(pullSocket.getInputStream());
-                ObjectOutputStream objectOutputStream = new ObjectOutputStream(pullSocket.getOutputStream());
-
-                //Give option code
-                objectOutputStream.writeObject(1);
-                objectOutputStream.flush();
-
-                //Give operation
-                objectOutputStream.writeObject(hashtag);
-                objectOutputStream.flush();
-
-                //Receive video List
-                HashMap<Channel.ChannelKey, String> channelVideoList = (HashMap<Channel.ChannelKey, String>) objectInputStream.readObject();
-                System.out.println(channelVideoList);
-
-                //Concatenate with larger list
-                //PROBLEM : LOCAL VARIABLES ARE THREAD SAFE, SO I CANNOT ACCESS THEM INSIDE THREAD
-                //(UNLESS THEY ARE FINAL, IN WHICH CASE I CANNOT UPDATE THEM) !!
-
-            } catch (IOException | ClassNotFoundException ioException) {
-                ioException.printStackTrace();
-            } finally {
-
-            }
-
-        }
-    }
 }
