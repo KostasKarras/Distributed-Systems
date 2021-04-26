@@ -355,6 +355,13 @@ public class AppNodeImpl implements Publisher, Consumer{
                 String hashtag;
                 ArrayList<String> hashtags = new ArrayList<>();
 
+                if (channel.getID_VideoFileMap().isEmpty()) {
+                    System.out.println("The channel doesn't have any videos to add hashtags.");
+                    continue;
+                }
+
+                System.out.println(channel.toString());
+
                 System.out.print("Please give the videoID of the video you want to add a hashtag: ");
                 videoID = Integer.parseInt(in.nextLine());
 
@@ -373,6 +380,11 @@ public class AppNodeImpl implements Publisher, Consumer{
                     if (!hashtags.contains(hashtag) && !video.getAssociatedHashtags().contains(hashtag)) {
                         hashtags.add(hashtag);
                     }
+                }
+
+                if (hashtags.isEmpty()) {
+                    System.out.println("No hashtags found to add.");
+                    continue;
                 }
 
                 channel.updateVideoFile(video, hashtags, "ADD", this);
@@ -400,6 +412,13 @@ public class AppNodeImpl implements Publisher, Consumer{
                 String hashtag;
                 ArrayList<String> hashtags = new ArrayList<>();
 
+                if (channel.getID_VideoFileMap().isEmpty()) {
+                    System.out.println("The channel doesn't have any videos to remove hashtags.");
+                    continue;
+                }
+
+                System.out.println(channel.toString());
+
                 System.out.print("Please give the videoID of the video you want to remove a hashtag: ");
                 videoID = Integer.parseInt(in.nextLine());
 
@@ -418,6 +437,11 @@ public class AppNodeImpl implements Publisher, Consumer{
                     if (!hashtags.contains(hashtag) && video.getAssociatedHashtags().contains(hashtag)) {
                         hashtags.add(hashtag);
                     }
+                }
+
+                if (hashtags.isEmpty()) {
+                    System.out.println("No hashtags found to remove.");
+                    continue;
                 }
 
                 channel.updateVideoFile(video, hashtags, "REMOVE", this);
@@ -473,6 +497,13 @@ public class AppNodeImpl implements Publisher, Consumer{
             } else if (choice.equals("7")){
 
                 int videoID;
+
+                if (channel.getID_VideoFileMap().isEmpty()) {
+                    System.out.println("The channel doesn't have any videos to delete.");
+                    continue;
+                }
+
+                System.out.println(channel.toString());
 
                 System.out.print("Please give the ID of the video you want to delete: ");
                 videoID = Integer.parseInt(in.nextLine());

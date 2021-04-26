@@ -110,9 +110,7 @@ public class Channel {
                     hashtagVideoFilesMap.put(hashtag, associatedVideos);
                 } else {
                     // Remove video from the hashtagVideoFilesMap.
-                    ArrayList<VideoFile> associatedVideos = new ArrayList<>();
-                    associatedVideos.add(video);
-                    hashtagVideoFilesMap.put(hashtag, associatedVideos);
+                    hashtagVideoFilesMap.remove(hashtag);
 
                     // Remove hashtag from the channel's Published Hashtags.
                     hashtagsPublished.remove(hashtag);
@@ -129,6 +127,10 @@ public class Channel {
 
     public ArrayList<String> getHashtagsPublished() {
         return hashtagsPublished;
+    }
+
+    public HashMap<Integer, VideoFile> getID_VideoFileMap() {
+        return ID_VideoFileMap;
     }
 
     public ArrayList<VideoFile> getVideoFiles_byHashtag(String hashtag) {
@@ -150,5 +152,14 @@ public class Channel {
 
     public void removeHashTag(String hashtag) {
         hashtagsPublished.remove(hashtag);
+    }
+
+    public String toString() {
+        String channelString;
+        channelString = "Printing Contents of channel " + channelName + "\r\n";
+        for (int id : ID_VideoNameMap.keySet()) {
+            channelString += String.valueOf(id) + ": " + ID_VideoFileMap.get(id) + "\r\n";
+        }
+        return channelString;
     }
 }
