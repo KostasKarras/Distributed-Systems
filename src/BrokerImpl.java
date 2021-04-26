@@ -35,7 +35,6 @@ public class BrokerImpl implements Broker{
     private static TreeMap<Integer, SocketAddress> brokerHashes;
     private static HashMap<String, SocketAddress> brokerChannelNames;
 
-
     public static void main(String[] args) {
         new BrokerImpl().initialize(4321);
     }
@@ -139,8 +138,14 @@ public class BrokerImpl implements Broker{
         try {
             if (channel_or_hashtag.charAt(0) == '#') {
                 addresses = brokerHashtags.get(channel_or_hashtag);
-                for (SocketAddress address : addresses) {
+                SocketAddress address;
+                while(!addresses.isEmpty()){
                     //Generate a thread for each address
+                    address = addresses.remove(0);
+                    ipPort = address.toString().split(":");
+                    publisher_ip = InetAddress.getByName(ipPort[0].substring(1));
+                    publisher_port = Integer.parseInt(ipPort[1]);
+                    new MultipleConnections(publisher_ip, publisher_port, channel_or_hashtag).start();
                 }
             }
             else {
@@ -169,14 +174,52 @@ public class BrokerImpl implements Broker{
                 System.out.println(channelVideoList);
 
             }
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
-        } catch (ClassNotFoundException e) {
+        } catch (ClassNotFoundException | IOException e) {
             e.printStackTrace();
         }
 
+    }
+
+    class MultipleConnections extends Thread{
+        Socket requestSocket;
+        ObjectInputStream objectInputStream;
+        ObjectOutputStream objectOutputStream;
+        String hashtag;
+        ArrayList<VideoFile> videoFiles;
+
+        /** Construct a Handler */
+        MultipleConnections(InetAddress publisherIp, int publisherPort, String hashtag) {
+            this.hashtag = hashtag;
+            try {
+                requestSocket = new Socket(publisherIp, publisherPort);
+                objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
+                objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        public void run() {
+            try{
+                //Give option code
+                objectOutputStream.writeObject(1);
+                objectOutputStream.flush();
+
+                //Give operation
+                objectOutputStream.writeObject("HASHTAG");
+                objectOutputStream.flush();
+
+                //Give hashtag
+                objectOutputStream.writeObject(hashtag);
+                objectOutputStream.flush();
+
+                //Store channel videos
+                videoFiles = (ArrayList<VideoFile>) objectInputStream.readObject();
+                System.out.println(videoFiles);
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     @Override
@@ -252,12 +295,16 @@ public class BrokerImpl implements Broker{
                 } else if (option == 6) {  // Notify Failure?
 
                 } else if (option == 7) {  // Notify Brokers for Hashtags
-                    /**KOSTAS-START*/
-                    String newHashtag = (String) objectInputStream.readObject();
+                    String message = (String) objectInputStream.readObject();
+                    if (message.equals("add")) {
+                        String newHashtag = (String) objectInputStream.readObject();
 
-                    //To key tou hashtag tha einai ylopoihmeno apo thn hashTopic!!!
-                    int key = calculateKeys(newHashtag);
-                    /**KOSTAS-END*/
+                        //To key tou hashtag tha einai ylopoihmeno apo thn hashTopic!!!
+                        //int key = calculateKeys(newHashtag);
+                    }
+                    else{
+                        String futureDeletedHashtag = (String) objectInputStream.readObject();
+                    }
                     //Thelei ylopoihsh
                 }
 
@@ -293,7 +340,7 @@ public class BrokerImpl implements Broker{
                 System.out.println("My Arraylist size: " + chunks.size());
 
                 try {
-                    File nf = new File("C:/Users/miked/Desktop/test.mp4");
+                    File nf = new File("C:/Users/Kostas/Desktop/test.mp4");
                     for (byte[] ar : chunks) {
                         FileOutputStream fw = new FileOutputStream(nf, true);
                         try {
