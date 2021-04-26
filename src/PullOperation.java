@@ -51,7 +51,6 @@ public class PullOperation {
 
         String[] ipPort;
         InetAddress publisher_ip;
-        int publisher_port;
         Socket pullSocket;
         ObjectOutputStream objectOutputStream;
         ObjectInputStream objectInputStream;
@@ -99,7 +98,6 @@ public class PullOperation {
         private final String hashtag;
         public SocketAddress address;
         public InetAddress publisher_ip;
-        public int publisher_port;
 
         /** Constructor */
         public PullThread(String hashtag, SocketAddress address) {
@@ -108,7 +106,6 @@ public class PullOperation {
             try {
                 String[] ipPort = address.toString().split(":");
                 publisher_ip = InetAddress.getByName(ipPort[0].substring(1));
-                publisher_port = Integer.parseInt(ipPort[1]);
             } catch (UnknownHostException e) {
                 e.printStackTrace();
             }
@@ -135,7 +132,6 @@ public class PullOperation {
 
                 //Receive video List
                 HashMap<ChannelKey, String> channelVideoList = (HashMap<ChannelKey, String>) objectInputStream.readObject();
-                System.out.println(channelVideoList);
 
                 //Concatenate with larger list
                 //PROBLEM : LOCAL VARIABLES ARE THREAD SAFE, SO I CANNOT ACCESS THEM INSIDE THREAD
@@ -144,7 +140,6 @@ public class PullOperation {
 
                 //Latch countdown
                 latch.countDown();
-                System.out.println(latch);
 
 
             } catch (IOException | ClassNotFoundException ioException) {

@@ -28,7 +28,6 @@ public class AppNodeImpl implements Publisher, Consumer{
         channel = new Channel("USER");
 
         //TEST CODE
-
         ArrayList<String> videoHashtags = new ArrayList<>();
         videoHashtags.add("#music");
         videoHashtags.add("#LinkingPark");
@@ -43,6 +42,7 @@ public class AppNodeImpl implements Publisher, Consumer{
         } catch (IOException ioException) {
             ioException.printStackTrace();
         }
+        //
 
         new RequestHandler().start();
 
@@ -245,13 +245,7 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
     public HashMap<Integer, String> getChannelVideoMap() {
-        //return channel.getChannelVideoNames();
-        HashMap<Integer,String> test = new HashMap<>();
-        test.put(10, "Michael");
-        test.put(20, "George");
-        test.put(30, "My lovely Grace");
-        System.out.println(test);
-        return test;
+        return channel.getChannelVideoNames();
     }
 
     public HashMap<ChannelKey, String> getHashtagVideoMap(String hashtag) {

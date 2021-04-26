@@ -190,13 +190,12 @@ public class BrokerImpl implements Broker{
                     String channel_or_hashtag = (String) objectInputStream.readObject();
 
                     if (channel_or_hashtag.charAt(0) == '#') {
-                        //TEST CODE
+                        //TEST CODE : I ADDED A HASHTAG IN BROKER HASHTAGS TO CHECK FUNCTION
                         ArrayList<SocketAddress> hashtagRelatedChannels= new ArrayList<>();
                         hashtagRelatedChannels.add(socket.getRemoteSocketAddress());
                         brokerHashtags.put(channel_or_hashtag, hashtagRelatedChannels);
                         //
                         ArrayList<SocketAddress> addresses = brokerHashtags.get(channel_or_hashtag);
-                        System.out.println("0 : " + addresses);
                         HashMap<ChannelKey, String> hashtagVideoList =
                                 pull_operation.pullHashtags(channel_or_hashtag, addresses);
                         System.out.println(hashtagVideoList);
