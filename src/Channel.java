@@ -79,6 +79,12 @@ public class Channel {
         }
     }
 
+    /**KOSTAS-START*/
+    public String getChannelName(){
+        return this.channelName;
+    }
+    /**KOSTAS-END*/
+    
     public void updateVideoFile(VideoFile video, ArrayList<String> hashtags, String method, AppNodeImpl appNode) {
         if (method == "ADD") {
             for (String hashtag : hashtags) {
