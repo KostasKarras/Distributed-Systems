@@ -29,7 +29,6 @@ public class BrokerImpl implements Broker{
     private static List<Broker> brokers = null;
     private static List<Consumer> registeredUsers = null;
     private static List<Publisher> registeredPublishers = null;
-    private static HashMap<String, ArrayList<String>> hashtagPublisherMap;//<hashtag, ArrayList socketAddress>?
     private static ServerSocket serverSocket;
     private static HashMap<String, ArrayList<SocketAddress>> brokerHashtags;
     private static TreeMap<Integer, SocketAddress> brokerHashes;
@@ -186,6 +185,7 @@ public class BrokerImpl implements Broker{
         ObjectOutputStream objectOutputStream;
         String hashtag;
         ArrayList<VideoFile> videoFiles;
+        String channelName;
 
         /** Construct a Handler */
         MultipleConnections(InetAddress publisherIp, int publisherPort, String hashtag) {
@@ -215,7 +215,10 @@ public class BrokerImpl implements Broker{
 
                 //Store channel videos
                 videoFiles = (ArrayList<VideoFile>) objectInputStream.readObject();
-                System.out.println(videoFiles);
+                channelName = (String) objectInputStream.readObject();
+                for (VideoFile video : videoFiles){
+                    System.out.printf("Video Id: %d \t Channel Name: %s \t Video Name: ",video.getVideoID(), channelName, video.getVideoName());
+                }
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
@@ -294,18 +297,33 @@ public class BrokerImpl implements Broker{
 
                 } else if (option == 6) {  // Notify Failure?
 
-                } else if (option == 7) {  // Notify Brokers for Hashtags
+                } else if (option == 7) {  // Notify Brokers for Hashtags |||||CHANNELS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    String hashtag = (String) objectInputStream.readObject();
                     String message = (String) objectInputStream.readObject();
+                    SocketAddress notificationSocket = (SocketAddress) objectInputStream.readObject();
                     if (message.equals("add")) {
-                        String newHashtag = (String) objectInputStream.readObject();
-
-                        //To key tou hashtag tha einai ylopoihmeno apo thn hashTopic!!!
-                        //int key = calculateKeys(newHashtag);
+                        if (brokerHashtags.containsKey(hashtag)) {
+                            if (brokerHashtags.get(hashtag).contains(notificationSocket))
+                                System.out.println("Publisher is already in the List.");
+                            else
+                                brokerHashtags.get(hashtag).add(notificationSocket);
+                        }
+                        else {
+                            ArrayList<SocketAddress> Sockets = new ArrayList<>();
+                            Sockets.add(notificationSocket);
+                            brokerHashtags.put(hashtag, Sockets);
+                        }
+                    } else {
+                        if (brokerHashtags.containsKey(hashtag)){
+                            if (brokerHashtags.get(hashtag).size() > 1)
+                                brokerHashtags.get(hashtag).remove(notificationSocket);
+                            else {
+                                brokerHashtags.remove(hashtag);
+                            }
+                        } else {
+                            System.out.println("No Publisher is responsible for hashtag: " + hashtag);
+                        }
                     }
-                    else{
-                        String futureDeletedHashtag = (String) objectInputStream.readObject();
-                    }
-                    //Thelei ylopoihsh
                 }
 
             } catch (IOException | ClassNotFoundException e) {
