@@ -143,37 +143,43 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
     @Override
-    public void notifyBrokersForHashTags(String hashtag, String action) {//find apropriate broker by using hashtopic first.
-        //klhsh sth hashtopic -> SocketAddress
-        //syndesi sto socketAddress
-        //SocketAddress socketAddress = hashTopic(hashtag);
-        //connect2(socketAddress);
-        connect();
+    public void notifyBrokersForHashTags(String hashtag, String action) {
+        Socket notificationSocket = null;
+        ObjectInputStream objectInputStream = null;
+        ObjectOutputStream objectOutputStream = null;
         try {
+            SocketAddress address = hashTopic(hashtag);
+            String [] ipPort = address.toString().split(":");
+            InetAddress broker_ip = InetAddress.getByName(ipPort[0].substring(1));
+            int broker_port = Integer.parseInt(ipPort[1]);
+
+            notificationSocket = new Socket(broker_ip, broker_port);
+            objectInputStream = new ObjectInputStream(notificationSocket.getInputStream());
+            objectOutputStream = new ObjectOutputStream(notificationSocket.getOutputStream());
+
             objectOutputStream.writeObject(7);
-            objectOutputStream.writeObject(action);
+            objectOutputStream.flush();
 
             objectOutputStream.writeObject(hashtag);
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
+            objectOutputStream.flush();
+
+            objectOutputStream.writeObject(action);
+            objectOutputStream.flush();
+
+            objectOutputStream.writeObject(notificationSocket);
+            objectOutputStream.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
         } finally {
-            disconnect();
+            try {
+                notificationSocket.close();
+                objectInputStream.close();
+                objectOutputStream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
-
-//    public void connect2(SocketAddress socketAddress) {
-//
-//        try {
-//            requestSocket = new Socket(InetAddress.getByName(String.valueOf(socketAddress)), 4321);
-//            objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
-//            objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
-//        } catch (UnknownHostException unknownHost) {
-//            System.err.println("You are trying to connect to an unknown host.");
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//
-//    }
 
     @Override
     public ArrayList<byte[]> generateChunks(VideoFile video) {
@@ -265,6 +271,7 @@ public class AppNodeImpl implements Publisher, Consumer{
     public void sendHashtagVideoList(ServeRequest serveRequest, String hashtag){
         try {
             serveRequest.objectOutputStream.writeObject(channel.getVideoFiles_byHashtag(hashtag));
+            serveRequest.objectOutputStream.writeObject(channel.getChannelName());
         } catch (IOException e) {
             e.printStackTrace();
         }
