@@ -10,7 +10,6 @@ public class Channel {
     private HashMap<Integer, VideoFile> ID_VideoFileMap;
     private HashMap<Integer, String> ID_VideoNameMap;//OR ID_MetadataMap?
 
-
     /** Constructors */
 
     //For new users
@@ -26,7 +25,8 @@ public class Channel {
 
     //To create existing channels
     public Channel (String channelName, ArrayList<String> hashtagsPublished, HashMap<String, ArrayList<VideoFile>>
-            hashtagVideoFilesMap, int counterVideoID, HashMap<Integer, VideoFile> ID_VideoFileMap, HashMap<Integer, String> ID_VideoNameMap) {
+            hashtagVideoFilesMap, int counterVideoID, HashMap<Integer, VideoFile> ID_VideoFileMap,
+                    HashMap<Integer, String> ID_VideoNameMap) {
         this.channelName = channelName;
         this.hashtagsPublished = hashtagsPublished;
         this.hashtagVideoFilesMap = hashtagVideoFilesMap;
@@ -36,12 +36,15 @@ public class Channel {
 
     }
 
-    public void addVideoFile(VideoFile video, AppNodeImpl appNode) {
+    public HashMap<String, String> addVideoFile(VideoFile video) {
         video.setVideoID(counterVideoID);
         ID_VideoFileMap.put(counterVideoID, video);
         ID_VideoNameMap.put(counterVideoID, video.getVideoName());
         counterVideoID++;
 
+        /**KOSTAS-START(CHECK THE RETURN TYPE)*/
+        HashMap<String, String> hashtagsNeedNotification = new HashMap<>();
+        /**KOSTAS-END*/
         ArrayList<String> hashtags = video.getAssociatedHashtags();
         for (String hashtag : hashtags) {
             if (hashtagsPublished.contains(hashtag)) {
@@ -54,31 +57,47 @@ public class Channel {
                 hashtagVideoFilesMap.put(hashtag, value);
 
                 hashtagsPublished.add(hashtag);
-                appNode.notifyBrokersForHashTags(hashtag, "ADD");
+                /**KOSTAS-START*/
+                hashtagsNeedNotification.put(hashtag, "ADD");
+                /**KOSTAS-END*/
             }
         }
+        /**KOSTAS-START*/
+        return hashtagsNeedNotification;
+        /**KOSTAS-END*/
     }
 
-    public void removeVideoFile(VideoFile video, AppNodeImpl appNode) {
+    public HashMap<String, String> removeVideoFile(VideoFile video) {
         ID_VideoFileMap.remove(video.getVideoID());
         ID_VideoNameMap.remove(video.getVideoID());
 
+        /**KOSTAS-START(CHECK THE RETURN TYPE)*/
+        HashMap<String, String> hashtagsNeedNotification = new HashMap<>();
+        /**KOSTAS-START*/
         ArrayList<String> hashtags = video.getAssociatedHashtags();
         for (String hashtag : hashtags) {
             if (hashtagVideoFilesMap.get(hashtag).size() == 1) {
                 hashtagVideoFilesMap.remove(hashtag);
 
                 hashtagsPublished.remove(hashtag);
-                appNode.notifyBrokersForHashTags(hashtag, "REMOVE");
+                /**KOSTAS-START*/
+                hashtagsNeedNotification.put(hashtag, "REMOVE");
+                /**KOSTAS-END*/
             } else {
                 ArrayList<VideoFile> value = hashtagVideoFilesMap.get(hashtag);
                 value.remove(video);
                 hashtagVideoFilesMap.put(hashtag, value);
             }
         }
+        /**KOSTAS-START*/
+        return hashtagsNeedNotification;
+        /**KOSTAS-END*/
     }
 
-    public void updateVideoFile(VideoFile video, ArrayList<String> hashtags, String method, AppNodeImpl appNode) {
+    public HashMap<String, String> updateVideoFile(VideoFile video, ArrayList<String> hashtags, String method) {
+        /**KOSTAS-START(CHECK THE RETURN TYPE)*/
+        HashMap<String, String> hashtagsNeedNotification = new HashMap<>();
+        /**KOSTAS-END*/
         if (method.equals("ADD")) {
             for (String hashtag : hashtags) {
                 video.addHashtag(hashtag);
@@ -96,7 +115,9 @@ public class Channel {
                     // Add hashtag to the channel's Published Hashtags.
                     hashtagsPublished.add(hashtag);
                     // Brokers notification needed about new hashtag in channel.
-                    appNode.notifyBrokersForHashTags(hashtag, "ADD");
+                    /**KOSTAS-START*/
+                    hashtagsNeedNotification.put(hashtag, "ADD");
+                    /**KOSTAS-START*/
                 }
             }
         } else if (method.equals("REMOVE")) {
@@ -114,18 +135,23 @@ public class Channel {
                     // Remove hashtag from the channel's Published Hashtags.
                     hashtagsPublished.remove(hashtag);
                     // Brokers notification needed about new hashtag in channel.
-                    appNode.notifyBrokersForHashTags(hashtag, "REMOVE");
+                    /**KOSTAS-START*/
+                    hashtagsNeedNotification.put(hashtag, "REMOVE");
+                    /**KOSTAS-END*/
                 }
             }
         } else {
             System.out.println("MAJOR ERROR");
         }
+        /**KOSTAS-START*/
+        return hashtagsNeedNotification;
+        /**KOSTAS-END*/
     }
 
     /** Getters */
 
-    public HashMap<Integer, VideoFile> getID_VideoFileMap() {
-        return ID_VideoFileMap;
+    public ArrayList<String> getHashtagsPublished() {
+        return hashtagsPublished;
     }
 
     public ArrayList<VideoFile> getVideoFiles_byHashtag(String hashtag) {
@@ -135,6 +161,11 @@ public class Channel {
     public VideoFile getVideoFile_byID (int ID) {
         return ID_VideoFileMap.get(ID);
     }
+
+    public HashMap<Integer, VideoFile> getID_VideoFileMap() {
+        return ID_VideoFileMap;
+    }
+
 
     public HashMap<Integer, String> getChannelVideoNames() {
         return ID_VideoNameMap;
