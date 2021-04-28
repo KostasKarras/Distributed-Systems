@@ -53,8 +53,12 @@ public class VideoFile {
 
 
     /** Setters */
-    public void addAssociatedHashTags(String hashtag) {
+    public void addHashtag(String hashtag) {
         associatedHashtags.add(hashtag);
+    }
+
+    public void removeHashtag(String hashtag) {
+        associatedHashtags.remove(hashtag);
     }
 
     public void setVideoID(int videoID) {

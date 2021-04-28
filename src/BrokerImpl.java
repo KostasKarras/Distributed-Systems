@@ -21,13 +21,11 @@ public class BrokerImpl implements Broker{
     private static List<Broker> brokers = null;
     private static List<Consumer> registeredUsers = null;
     private static List<Publisher> registeredPublishers = null;
-    private static HashMap<String, ArrayList<String>> hashtagPublisherMap;//<hashtag, ArrayList socketAddress>?
     private static ServerSocket serverSocket;
     private static HashMap<String, ArrayList<SocketAddress>> brokerHashtags;
     private static TreeMap<Integer, SocketAddress> brokerHashes;
     private static HashMap<String, SocketAddress> brokerChannelNames;
 
-    private static InetAddress userMulticastIP;
 
     public static void main(String[] args) {
 
@@ -49,7 +47,6 @@ public class BrokerImpl implements Broker{
         try {
             serverSocket = new ServerSocket(port);
 
-            userMulticastIP = InetAddress.getByName("228.5.6.8");
 
             //HANDLE MULTICAST
             new Multicast_Handler().start();
@@ -117,11 +114,6 @@ public class BrokerImpl implements Broker{
     @Override
     public void notifyBrokersOnChanges() {
 
-    }
-
-    @Override
-    public HashMap<Integer, String> pull(String channel_or_hashtag) {
-        return null;
     }
 
     @Override
@@ -219,15 +211,61 @@ public class BrokerImpl implements Broker{
                 } else if (option == 6) {  // Notify Failure?
 
                 } else if (option == 7) {  // Notify Brokers for Hashtags
-                    /**KOSTAS-START*/
-                    String newHashtag = (String) objectInputStream.readObject();
 
-                    //To key tou hashtag tha einai ylopoihmeno apo thn hashTopic!!!
-                    int key = calculateKeys(newHashtag);
-                    /**KOSTAS-END*/
-                    //Thelei ylopoihsh
+                    String hashtag = (String) objectInputStream.readObject();
+                    String message = (String) objectInputStream.readObject();
+                    SocketAddress notificationSocket = (SocketAddress) objectInputStream.readObject();
+                    if (message.equals("add")) {
+                        if (brokerHashtags.containsKey(hashtag)) {
+                            if (brokerHashtags.get(hashtag).contains(notificationSocket))
+                                System.out.println("Publisher is already in the List.");
+                            else
+                                brokerHashtags.get(hashtag).add(notificationSocket);
+                        } else {
+                            ArrayList<SocketAddress> Sockets = new ArrayList<>();
+                            Sockets.add(notificationSocket);
+                            brokerHashtags.put(hashtag, Sockets);
+                        }
+                    } else {
+                        if (brokerHashtags.containsKey(hashtag)) {
+                            if (brokerHashtags.get(hashtag).size() > 1)
+                                brokerHashtags.get(hashtag).remove(notificationSocket);
+                            else {
+                                brokerHashtags.remove(hashtag);
+                            }
+                        } else {
+                            System.out.println("No Publisher is responsible for hashtag: " + hashtag);
+                        }
                 }
 
+                    /**DIMITRIS-START. Wrong socketAddress. Need to get only IP. */
+                    String action = (String) objectInputStream.readObject();
+                    String hashtag2 = (String) objectInputStream.readObject();
+
+                    if (action.equals("ADD")) {
+                        if (brokerHashtags.get(hashtag2) == null) {
+                            ArrayList<SocketAddress> value = new ArrayList<>();
+                            value.add(this.socket.getRemoteSocketAddress());
+                            brokerHashtags.put(hashtag2, value);
+                        } else {
+                            ArrayList<SocketAddress> value = brokerHashtags.get(hashtag2);
+                            value.add(this.socket.getRemoteSocketAddress());//??
+                            brokerHashtags.put(hashtag2, value);
+                        }
+                    } else if (action.equals("REMOVE")) {
+                        if (brokerHashtags.get(hashtag2).size() > 1) {
+                            ArrayList<SocketAddress> value = brokerHashtags.get(hashtag2);
+                            value.remove(this.socket.getRemoteSocketAddress());//??
+                            brokerHashtags.put(hashtag2, value);
+                        } else {
+                            brokerHashtags.remove(hashtag2);
+                        }
+                    }
+
+                    notifyBrokersOnChanges();
+                    /**DIMITRIS-END */
+
+                }
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
