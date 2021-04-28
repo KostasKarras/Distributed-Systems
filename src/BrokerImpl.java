@@ -26,6 +26,7 @@ public class BrokerImpl implements Broker{
     private static TreeMap<Integer, SocketAddress> brokerHashes;
     private static HashMap<String, SocketAddress> brokerChannelNames;
 
+    private static InetAddress userMulticastIP;
 
     public static void main(String[] args) {
 
@@ -47,6 +48,7 @@ public class BrokerImpl implements Broker{
         try {
             serverSocket = new ServerSocket(port);
 
+            userMulticastIP = InetAddress.getByName("228.5.6.8");
 
             //HANDLE MULTICAST
             new Multicast_Handler().start();
