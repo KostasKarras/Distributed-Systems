@@ -1,8 +1,4 @@
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.math.BigInteger;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
@@ -168,6 +164,19 @@ public class BrokerImpl implements Broker{
             try {
                 int option = (int) objectInputStream.readObject();
                 // If-else statements and calling of specific acceptConnection.
+
+                //MICHAEL
+                if (option == -1) {
+                    try {
+                        objectInputStream.close();
+                        objectOutputStream.close();
+                        socket.close();
+                        return;
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                //END OF MICHAEL
 
                 /** Node Requests Handle */
                 if (option == 0) {  // Get Brokers
@@ -338,7 +347,7 @@ public class BrokerImpl implements Broker{
 
                 //INITIALIZE MULTICAST SOCKET
                 int multicastPort = 5000;
-                InetAddress brokerIP = InetAddress.getByName("192.168.2.54");
+                InetAddress brokerIP = InetAddress.getByName("192.168.1.170");
                 SocketAddress multicastSocketAddress = new InetSocketAddress(brokerIP, multicastPort);
                 multicastSocket = new MulticastSocket(multicastSocketAddress);
 

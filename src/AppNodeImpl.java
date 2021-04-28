@@ -19,7 +19,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     public static void main(String[] args) {
 
-        new AppNodeImpl().initialize(4321);
+        new AppNodeImpl().initialize(4950);
     }
 
     @Override
@@ -101,10 +101,10 @@ public class AppNodeImpl implements Publisher, Consumer{
             objectOutputStream.writeObject(1);
             objectOutputStream.flush();
 
+            message = (String) objectInputStream.readObject();
+
             objectOutputStream.writeObject("I want to push a new video!");
             objectOutputStream.flush();
-
-            message = (String) objectInputStream.readObject();
             System.out.println("Server>" + message);
 
             objectOutputStream.writeObject(chunks.size());
@@ -196,6 +196,8 @@ public class AppNodeImpl implements Publisher, Consumer{
     /** Check if it runs, to simplify things */
     private void connect2(SocketAddress socketAddress) {
         try {
+            requestSocket = new Socket();
+            requestSocket.bind(socketAddress);
             requestSocket.connect(socketAddress);
             objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
             objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
@@ -248,6 +250,9 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     public void disconnect() {
         try {
+            objectOutputStream.writeObject(-1);
+            objectOutputStream.flush();
+
             objectInputStream.close();
             objectOutputStream.close();
             requestSocket.close();
@@ -293,12 +298,13 @@ public class AppNodeImpl implements Publisher, Consumer{
 
         public ServerSocket serverSocket;
         public Socket connectionSocket;
-        private static final int port = 4900;
+        private static final int port = 4950;
         private int current_threads = 1;
 
         public void run() {
 
             try {
+
                 serverSocket = new ServerSocket(port);
 
                 while(true) {
@@ -314,6 +320,8 @@ public class AppNodeImpl implements Publisher, Consumer{
                     serverSocket.close();
                 } catch (IOException ioException) {
                     ioException.printStackTrace();
+                } catch (NullPointerException npe) {
+                    npe.printStackTrace();
                 }
             }
         }
@@ -385,7 +393,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
                 //INITIALIZE MULTICAST SOCKET
                 int multicastPort = 5000;
-                InetAddress brokerIP = InetAddress.getByName("192.168.2.54");
+                InetAddress brokerIP = InetAddress.getByName("192.168.1.170");
                 SocketAddress multicastSocketAddress = new InetSocketAddress(brokerIP, multicastPort);
                 multicastSocket = new MulticastSocket(multicastSocketAddress);
 
