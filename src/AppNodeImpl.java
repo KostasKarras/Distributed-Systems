@@ -421,7 +421,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                             }
                             //rebuild chunks
                             try {
-                                File nf = new File("C:/Users/Kos/Desktop/test.mp4");
+                                File nf = new File("C:/Users/Kostas/Desktop/test.mp4");
                                 for (byte[] ar : chunks) {
                                     FileOutputStream fw = new FileOutputStream(nf, true);
                                     try {
@@ -467,7 +467,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                             }
                             //rebuild chunks
                             try {
-                                File nf = new File("C:/Users/Kos/Desktop/test.mp4");
+                                File nf = new File("C:/Users/Kostas/Desktop/test.mp4");
                                 for (byte[] ar : chunks) {
                                     FileOutputStream fw = new FileOutputStream(nf, true);
                                     try {
