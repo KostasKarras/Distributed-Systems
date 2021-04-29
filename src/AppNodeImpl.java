@@ -25,12 +25,20 @@ public class AppNodeImpl implements Publisher, Consumer{
     @Override
     public void initialize(int port) {
 
+        //CHANNEL NAME
         channel = new Channel("USER");
-        channelBroker = hashTopic(channel.getChannelName());
 
-        // FIRST CONNECTION
-        connect2(channelBroker);
+        //FIRST CONNECTION
+        connect();
+
         try {
+
+            //THAT IS NOT CORRECT YET
+
+            //SEND OPTION 4 FOR INITIALIZATION
+            objectOutputStream.writeObject(4);
+            objectOutputStream.flush();
+
             //RECEIVE BROKER HASHES
             brokerHashes = (TreeMap<Integer, SocketAddress>) objectInputStream.readObject();
 
@@ -90,6 +98,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
         int digest;
         SocketAddress brokerAddress = brokerHashes.get(brokerHashes.firstKey());
+
         try {
             MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
             byte[] bb = sha256.digest(hashtopic.getBytes(StandardCharsets.UTF_8));
@@ -474,6 +483,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
                 //Get right broker
                 SocketAddress socketAddress = hashTopic(channel_or_hashtag);
+                System.out.println(socketAddress);
 
                 //Connect to that broker
                 connect2(socketAddress);

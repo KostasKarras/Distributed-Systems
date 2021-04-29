@@ -43,6 +43,7 @@ public class BrokerImpl implements Broker{
 
         try {
             serverSocket = new ServerSocket(port);
+            System.out.println(serverSocket.getInetAddress());
 
             userMulticastIP = InetAddress.getByName("228.5.6.8");
 
@@ -240,6 +241,8 @@ public class BrokerImpl implements Broker{
 
                 else if (option == 4) { //FIRST CONNECTION
 
+                    System.out.println("NEVER GOT IN HERE!");
+
                     //SEND BROKER HASHES
                     objectOutputStream.writeObject(brokerHashes);
                     objectOutputStream.flush();
@@ -249,10 +252,7 @@ public class BrokerImpl implements Broker{
                     SocketAddress socketAddress = (SocketAddress) objectInputStream.readObject();
                     brokerChannelNames.put(channel_name, socketAddress);
 
-                }
-
                 /** Publisher Requests Handle */
-                else if (option == 4) {  // Hash Topic?
 
                 } else if (option == 5) {  // Push?
 
