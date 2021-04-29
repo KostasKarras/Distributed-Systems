@@ -1,3 +1,5 @@
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +17,7 @@ interface Publisher extends Node{
 
     public SocketAddress hashTopic(String hashtopic);
 
-    public void push(String hashtags, VideoFile video);
+    public void push(int id, ObjectInputStream objectInputStream, ObjectOutputStream objectOutputStream);
 
     public void notifyFailure(Broker broker);
 

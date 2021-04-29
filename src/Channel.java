@@ -9,7 +9,7 @@ public class Channel {
     private HashMap<String, ArrayList<VideoFile>> hashtagVideoFilesMap;
     private int counterVideoID;
     private HashMap<Integer, VideoFile> ID_VideoFileMap;
-    private HashMap<Integer, String> ID_VideoNameMap;//OR ID_MetadataMap?
+    private HashMap<ChannelKey, String> ID_VideoNameMap;//OR ID_MetadataMap?
 
     /** Constructors */
 
@@ -27,7 +27,7 @@ public class Channel {
     //To create existing channels
     public Channel (String channelName, ArrayList<String> hashtagsPublished, HashMap<String, ArrayList<VideoFile>>
             hashtagVideoFilesMap, int counterVideoID, HashMap<Integer, VideoFile> ID_VideoFileMap,
-                    HashMap<Integer, String> ID_VideoNameMap) {
+                    HashMap<ChannelKey, String> ID_VideoNameMap) {
         this.channelName = channelName;
         this.hashtagsPublished = hashtagsPublished;
         this.hashtagVideoFilesMap = hashtagVideoFilesMap;
@@ -40,7 +40,7 @@ public class Channel {
     public void addVideoFile(VideoFile video, AppNodeImpl appNode) {
         video.setVideoID(counterVideoID);
         ID_VideoFileMap.put(counterVideoID, video);
-        ID_VideoNameMap.put(counterVideoID, video.getVideoName());
+        ID_VideoNameMap.put(new ChannelKey(channelName, video.getVideoID()), video.getVideoName());
         counterVideoID++;
 
         ArrayList<String> hashtags = video.getAssociatedHashtags();
@@ -62,7 +62,7 @@ public class Channel {
 
     public void removeVideoFile(VideoFile video, AppNodeImpl appNode) {
         ID_VideoFileMap.remove(video.getVideoID());
-        ID_VideoNameMap.remove(video.getVideoID());
+        ID_VideoNameMap.remove(new ChannelKey(channelName, video.getVideoID()));
 
         ArrayList<String> hashtags = video.getAssociatedHashtags();
         for (String hashtag : hashtags) {
@@ -142,7 +142,7 @@ public class Channel {
     }
 
 
-    public HashMap<Integer, String> getChannelVideoNames() {
+    public HashMap<ChannelKey, String> getChannelVideoNames() {
         return ID_VideoNameMap;
     }
 
@@ -180,8 +180,9 @@ public class Channel {
     public String toString() {
         String channelString;
         channelString = "Printing Contents of channel " + channelName + "\r\n";
-        for (int id : ID_VideoNameMap.keySet()) {
-            channelString += String.valueOf(id) + ": " + getVideoFile_byID(id).getVideoName() + "\r\n";
+        for (ChannelKey key : ID_VideoNameMap.keySet()) {
+            int id = key.getVideoID();
+            channelString += id + ": " + getVideoFile_byID(id).getVideoName() + "\r\n";
         }
         return channelString;
     }

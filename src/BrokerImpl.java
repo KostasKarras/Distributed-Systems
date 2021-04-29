@@ -191,26 +191,63 @@ public class BrokerImpl implements Broker{
                     PullOperation pull_operation = new PullOperation();
 
                     String channel_or_hashtag = (String) objectInputStream.readObject();
+                    HashMap<ChannelKey, String> videoList;
 
                     if (channel_or_hashtag.charAt(0) == '#') {
                         //TEST CODE : I ADDED A HASHTAG IN BROKER HASHTAGS TO CHECK FUNCTION
-                        ArrayList<SocketAddress> hashtagRelatedChannels= new ArrayList<>();
+                        ArrayList<SocketAddress> hashtagRelatedChannels = new ArrayList<>();
                         hashtagRelatedChannels.add(socket.getRemoteSocketAddress());
                         brokerHashtags.put(channel_or_hashtag, hashtagRelatedChannels);
                         //
                         ArrayList<SocketAddress> addresses = brokerHashtags.get(channel_or_hashtag);
-                        HashMap<ChannelKey, String> hashtagVideoList =
-                                pull_operation.pullHashtags(channel_or_hashtag, addresses);
-                        System.out.println(hashtagVideoList);
-                    }
-                    else {
+                        videoList = pull_operation.pullHashtags(channel_or_hashtag, addresses);
+                    } else {
                         SocketAddress publisherAddress = brokerChannelNames.get(channel_or_hashtag);
-                        HashMap<Integer, String> channelVideoList =
-                                pull_operation.pullChannel(publisherAddress);
-                        System.out.println(channelVideoList);
+                        videoList = pull_operation.pullChannel(publisherAddress);
                     }
+                    objectOutputStream.writeObject(videoList);
 
-                } else if (option == 3) {  // Play Data
+
+                } else if (option == 3) {// Play Data
+
+                    try {
+                        PullOperation pull_operation = new PullOperation();
+
+                        //RECEIVE CHANNEL KEY AND EXTRACT SOCKET ADDRESS OF PUBLISHER
+                        ChannelKey key = (ChannelKey) objectInputStream.readObject();
+                        SocketAddress publisherAddress = brokerChannelNames.get(key.getChannelName());
+
+                        //PULL VIDEO FROM PUBLISHER
+                        ArrayList<byte[]> video_chunks = pull_operation.pullVideo(key, publisherAddress);
+
+                        //SEND VIDEO CHUNKS
+                        objectOutputStream.writeObject(video_chunks.size());
+                        objectOutputStream.flush();
+
+                        while (!video_chunks.isEmpty()) {
+                            byte[] clientToServer = video_chunks.remove(0);
+                            objectOutputStream.writeObject(clientToServer);
+                            objectOutputStream.flush();
+                        }
+
+                    } catch (IOException | ClassNotFoundException ioException) {
+                        ioException.printStackTrace();
+                    } catch (NoSuchElementException nsee) {
+                        objectOutputStream.writeObject("This channel doesn't exist");
+                        objectOutputStream.flush();
+                    }
+                }
+
+                else if (option == 4) { //FIRST CONNECTION
+
+                    //SEND BROKER HASHES
+                    objectOutputStream.writeObject(brokerHashes);
+                    objectOutputStream.flush();
+
+                    //RECEIVE CHANNEL NAME
+                    String channel_name = (String) objectInputStream.readObject();
+                    SocketAddress socketAddress = (SocketAddress) objectInputStream.readObject();
+                    brokerChannelNames.put(channel_name, socketAddress);
 
                 }
 
@@ -347,7 +384,7 @@ public class BrokerImpl implements Broker{
 
                 //INITIALIZE MULTICAST SOCKET
                 int multicastPort = 5000;
-                InetAddress brokerIP = InetAddress.getByName("192.168.1.170");
+                InetAddress brokerIP = InetAddress.getByName("192.168.1.179");
                 SocketAddress multicastSocketAddress = new InetSocketAddress(brokerIP, multicastPort);
                 multicastSocket = new MulticastSocket(multicastSocketAddress);
 
