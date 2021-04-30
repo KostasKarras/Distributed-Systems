@@ -1,17 +1,12 @@
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.math.BigInteger;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.TreeMap;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.stream.IntStream;
 
 public class BrokerImpl implements Broker{
 
@@ -27,6 +22,7 @@ public class BrokerImpl implements Broker{
     private static TreeMap<Integer, SocketAddress> brokerHashes;
     private static HashMap<String, SocketAddress> brokerChannelNames;
 
+    private static InetAddress userMulticastIP;
 
     public static void main(String[] args) {
 
@@ -47,7 +43,9 @@ public class BrokerImpl implements Broker{
 
         try {
             serverSocket = new ServerSocket(port);
+            System.out.println(serverSocket.getInetAddress());
 
+            userMulticastIP = InetAddress.getByName("228.5.6.8");
 
             //HANDLE MULTICAST
             new Multicast_Handler().start();
@@ -168,6 +166,19 @@ public class BrokerImpl implements Broker{
                 int option = (int) objectInputStream.readObject();
                 // If-else statements and calling of specific acceptConnection.
 
+                //MICHAEL
+                if (option == -1) {
+                    try {
+                        objectInputStream.close();
+                        objectOutputStream.close();
+                        socket.close();
+                        return;
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                //END OF MICHAEL
+
                 /** Node Requests Handle */
                 if (option == 0) {  // Get Brokers
 
@@ -181,97 +192,71 @@ public class BrokerImpl implements Broker{
                     PullOperation pull_operation = new PullOperation();
 
                     String channel_or_hashtag = (String) objectInputStream.readObject();
+                    HashMap<ChannelKey, String> videoList;
 
                     if (channel_or_hashtag.charAt(0) == '#') {
                         //TEST CODE : I ADDED A HASHTAG IN BROKER HASHTAGS TO CHECK FUNCTION
-                        ArrayList<SocketAddress> hashtagRelatedChannels= new ArrayList<>();
+                        ArrayList<SocketAddress> hashtagRelatedChannels = new ArrayList<>();
                         hashtagRelatedChannels.add(socket.getRemoteSocketAddress());
                         brokerHashtags.put(channel_or_hashtag, hashtagRelatedChannels);
                         //
                         ArrayList<SocketAddress> addresses = brokerHashtags.get(channel_or_hashtag);
-                        HashMap<ChannelKey, String> hashtagVideoList =
-                                pull_operation.pullHashtags(channel_or_hashtag, addresses);
-                        objectOutputStream.writeObject(hashtagVideoList);
-                    }
-                    else {
+                        videoList = pull_operation.pullHashtags(channel_or_hashtag, addresses);
+                    } else {
                         SocketAddress publisherAddress = brokerChannelNames.get(channel_or_hashtag);
-                        HashMap<Integer, String> channelVideoList =
-                                pull_operation.pullChannel(publisherAddress);
-                        objectOutputStream.writeObject(channelVideoList);
+                        videoList = pull_operation.pullChannel(publisherAddress);
                     }
-                } else if (option == 3) {  // Play Data
-                    /**KOSTAS-START*/
-                    PullOperation pull_operation = new PullOperation();
+                    objectOutputStream.writeObject(videoList);
 
-                    String channel_or_hashtag = (String) objectInputStream.readObject();
 
-                    if (channel_or_hashtag.charAt(0) == '#') {
-                        //TEST CODE : I ADDED A HASHTAG IN BROKER HASHTAGS TO CHECK FUNCTION
-                        ArrayList<SocketAddress> hashtagRelatedChannels= new ArrayList<>();
-                        hashtagRelatedChannels.add(socket.getRemoteSocketAddress());
-                        brokerHashtags.put(channel_or_hashtag, hashtagRelatedChannels);
-                        //
-                        ArrayList<SocketAddress> addresses = brokerHashtags.get(channel_or_hashtag);
-                        HashMap<ChannelKey, String> hashtagVideoList =
-                                pull_operation.pullHashtags(channel_or_hashtag, addresses);
-                        objectOutputStream.writeObject(hashtagVideoList);
+                } else if (option == 3) {// Play Data
 
-                        ChannelKey channelKey = (ChannelKey)objectInputStream.readObject();
+                    try {
+                        PullOperation pull_operation = new PullOperation();
 
-                        if (hashtagVideoList.containsKey(channelKey)) {
-                            objectOutputStream.writeObject("Exists");
-                            ArrayList<byte[]> chunksToSend = pullVideo(channelKey);
-                            try {
-                                objectOutputStream.writeObject(chunksToSend.size());
-                                objectOutputStream.flush();
+                        //RECEIVE CHANNEL KEY AND EXTRACT SOCKET ADDRESS OF PUBLISHER
+                        ChannelKey key = (ChannelKey) objectInputStream.readObject();
+                        //SocketAddress publisherAddress = brokerChannelNames.get(key.getChannelName());
+                        InetAddress inetAddress = InetAddress.getByName("127.0.0.1");
+                        SocketAddress publisherAddress = new InetSocketAddress(inetAddress, 4950);
+                        //requestSocket2.bind(socketAddress);
+                        //requestSocket2.connect(socketAddress);
 
-                                while (!chunksToSend.isEmpty()) {
-                                    byte[] clientToServer = chunksToSend.remove(0);
-                                    objectOutputStream.write(clientToServer);
-                                    objectOutputStream.flush();
-                                }
-                            } catch (IOException ioException) {
-                                ioException.printStackTrace();
-                            }
+                        //PULL VIDEO FROM PUBLISHER
+                        ArrayList<byte[]> video_chunks = pull_operation.pullVideo(key, publisherAddress);
+
+                        //SEND VIDEO CHUNKS
+                        objectOutputStream.writeObject(video_chunks.size());
+                        objectOutputStream.flush();
+
+                        while (!video_chunks.isEmpty()) {
+                            byte[] clientToServer = video_chunks.remove(0);
+                            objectOutputStream.write(clientToServer);
+                            objectOutputStream.flush();
                         }
-                        else
-                            objectOutputStream.writeObject("Not Exists");
-                    }
-                    else {
-                        SocketAddress publisherAddress = brokerChannelNames.get(channel_or_hashtag);
-                        HashMap<Integer, String> channelVideoList =
-                                pull_operation.pullChannel(publisherAddress);
-                        objectOutputStream.writeObject(channelVideoList);
 
-                        int id  = (int) objectInputStream.readObject();
-                        String channelName = (String) objectInputStream.readObject();
-
-                        ChannelKey channelKey = new ChannelKey(channelName, id);
-
-                        if (channelVideoList.containsKey(id)) {
-                            objectOutputStream.writeObject("Exists");
-                            ArrayList<byte[]> chunksToSend = pullVideo(channelKey);
-                            try {
-                                objectOutputStream.writeObject(chunksToSend.size());
-                                objectOutputStream.flush();
-
-                                while (!chunksToSend.isEmpty()) {
-                                    byte[] clientToServer = chunksToSend.remove(0);
-                                    objectOutputStream.write(clientToServer);
-                                    objectOutputStream.flush();
-                                }
-                            } catch (IOException ioException) {
-                                ioException.printStackTrace();
-                            }
-                        }
-                        else
-                            objectOutputStream.writeObject("Not Exists");
+                    } catch (IOException | ClassNotFoundException ioException) {
+                        ioException.printStackTrace();
+                    } catch (NoSuchElementException nsee) {
+                        objectOutputStream.writeObject("This channel doesn't exist");
+                        objectOutputStream.flush();
                     }
                 }
-                /**KOSTAS-START*/
 
-                /** Publisher Requests Handle */
-                else if (option == 4) {  // Hash Topic?
+                else if (option == 4) { //FIRST CONNECTION
+
+                    System.out.println("NEVER GOT IN HERE!");
+
+                    //SEND BROKER HASHES
+                    objectOutputStream.writeObject(brokerHashes);
+                    objectOutputStream.flush();
+
+                    //RECEIVE CHANNEL NAME
+                    String channel_name = (String) objectInputStream.readObject();
+                    SocketAddress socketAddress = (SocketAddress) objectInputStream.readObject();
+                    brokerChannelNames.put(channel_name, socketAddress);
+
+                    /** Publisher Requests Handle */
 
                 } else if (option == 5) {  // Push?
 
@@ -282,7 +267,7 @@ public class BrokerImpl implements Broker{
                     String hashtag = (String) objectInputStream.readObject();
                     String message = (String) objectInputStream.readObject();
                     SocketAddress notificationSocket = (SocketAddress) objectInputStream.readObject();
-                    if (message.equals("ADD")) {
+                    if (message.equals("add")) {
                         if (brokerHashtags.containsKey(hashtag)) {
                             if (brokerHashtags.get(hashtag).contains(notificationSocket))
                                 System.out.println("Publisher is already in the List.");
@@ -333,51 +318,18 @@ public class BrokerImpl implements Broker{
                     /**DIMITRIS-END */
 
                 }
-            } catch (IOException | ClassNotFoundException e) {
-                e.printStackTrace();
-            }
-        }
-
-        /**KOSTAS-START*/
-        public ArrayList<byte[]> pullVideo(ChannelKey channelKey){
-            ArrayList<byte[]> chunks = null;
-            String channel = channelKey.getChannelName();
-            int videoID = channelKey.getVideoID();
-            SocketAddress publisherAddress = brokerChannelNames.get(channel);
-
-            String[] ipPort;
-            InetAddress publisher_ip;
-            Socket pullSocket;
-
-            try {
-                ipPort = publisherAddress.toString().split(":");
-                publisher_ip = InetAddress.getByName(ipPort[0].substring(1));
-
-                pullSocket = new Socket(publisher_ip, 4900);
-                objectInputStream = new ObjectInputStream(pullSocket.getInputStream());
-                objectOutputStream = new ObjectOutputStream(pullSocket.getOutputStream());
-
-                objectOutputStream.writeObject(2);
-                objectOutputStream.flush();
-
-                objectOutputStream.writeObject(channelKey);
-                objectOutputStream.flush();
-
-                int size = (int) objectInputStream.readObject();
-                byte[] chunk;
-
-                for (int i = 0;i < size;i++){
-                    chunk = new byte[4096];
-                    chunk = objectInputStream.readAllBytes();
-                    chunks.add(chunk);
+                try {
+                    objectInputStream.close();
+                    objectOutputStream.close();
+                    socket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
-            return chunks;
         }
-        /**KOSTAS-START*/
-        /**-------------------------------------------THE HANDLE_PUSH WILL PROBABLY NOT BE NEEDED-------------------------------------------*/
+
         public void handle_push() {
             try {
 
@@ -405,7 +357,7 @@ public class BrokerImpl implements Broker{
                 System.out.println("My Arraylist size: " + chunks.size());
 
                 try {
-                    File nf = new File("C:/Users/Kostas/Desktop/test.mp4");
+                    File nf = new File("C:/Users/miked/Desktop/test.mp4");
                     for (byte[] ar : chunks) {
                         FileOutputStream fw = new FileOutputStream(nf, true);
                         try {
