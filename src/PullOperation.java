@@ -47,14 +47,14 @@ public class PullOperation {
 
     }
 
-    public HashMap<Integer, String> pullChannel(SocketAddress publisherAddress) {
+    public HashMap<ChannelKey, String> pullChannel(SocketAddress publisherAddress) {
 
         String[] ipPort;
         InetAddress publisher_ip;
         Socket pullSocket;
         ObjectOutputStream objectOutputStream;
         ObjectInputStream objectInputStream;
-        HashMap<Integer, String> channelVideoList = null;
+        HashMap<ChannelKey, String> channelVideoList = null;
 
         try {
             //Split ip and port from address
@@ -75,7 +75,7 @@ public class PullOperation {
             objectOutputStream.flush();
 
             //Store channel videos
-            channelVideoList = (HashMap<Integer, String>) objectInputStream.readObject();
+            channelVideoList = (HashMap<ChannelKey, String>) objectInputStream.readObject();
 
             //Close connections
             objectInputStream.close();
@@ -85,6 +85,56 @@ public class PullOperation {
             e.printStackTrace();
         }
         return channelVideoList;
+    }
+
+    public ArrayList<byte[]> pullVideo(ChannelKey channelKey, SocketAddress publisherAddress){
+
+        ArrayList<byte[]> chunks = new ArrayList<>();
+        String channel = channelKey.getChannelName();
+        int videoID = channelKey.getVideoID();
+
+        String[] ipPort;
+        InetAddress publisher_ip;
+        Socket pullSocket;
+        ObjectInputStream objectInputStream;
+        ObjectOutputStream objectOutputStream;
+
+        try {
+            //Split ip and port from address
+            ipPort = publisherAddress.toString().split(":");
+            publisher_ip = InetAddress.getByName(ipPort[0].substring(1));
+
+            //Make connection with publisher
+            pullSocket = new Socket(publisher_ip, 4900);
+            objectInputStream = new ObjectInputStream(pullSocket.getInputStream());
+            objectOutputStream = new ObjectOutputStream(pullSocket.getOutputStream());
+
+            //Send option
+            objectOutputStream.writeObject(2);
+            objectOutputStream.flush();
+
+            //Send channelKey
+            objectOutputStream.writeObject(channelKey);
+            objectOutputStream.flush();
+
+            //Check if video exists
+            boolean exists = (boolean) objectInputStream.readObject();
+            if (!exists) {
+                return chunks;
+            }
+
+            int size = (int) objectInputStream.readObject();
+            byte[] chunk;
+
+            for (int i = 0;i < size;i++){
+                chunk = new byte[4096];
+                chunk = objectInputStream.readAllBytes();
+                chunks.add(chunk);
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return chunks;
     }
 
     /** Thread-safe update of hashtag video list. */
@@ -148,4 +198,5 @@ public class PullOperation {
 
         }
     }
+
 }
