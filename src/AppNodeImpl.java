@@ -154,8 +154,6 @@ public class AppNodeImpl implements Publisher, Consumer{
     public void notifyBrokersForHashTags(String hashtag, String action) {
         connect();
         try {
-            SocketAddress address = hashTopic(hashtag);//NOT WORKING
-
             objectOutputStream.writeObject(7);
             objectOutputStream.flush();
 
@@ -229,9 +227,6 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     public void disconnect2() {
         try {
-//            objectOutputStream2.writeObject(-1);
-//            objectOutputStream2.flush();
-
             objectInputStream2.close();
             objectOutputStream2.close();
             requestSocket2.close();
@@ -383,7 +378,6 @@ public class AppNodeImpl implements Publisher, Consumer{
     public void runUser() {
         //BUILD INTERFACE
         Scanner in = new Scanner(System.in);
-        Scanner in2 = new Scanner(System.in);
         int end = 0;
         String choice;
         do {
@@ -411,7 +405,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
                 //Get right broker
                 SocketAddress socketAddress = hashTopic(channel_or_hashtag);
-                System.out.println(socketAddress);
+                //System.out.println(socketAddress);
 
                 //Connect to that broker
                 connect2(socketAddress);
@@ -437,77 +431,74 @@ public class AppNodeImpl implements Publisher, Consumer{
                 }
 
                 //CHOOSE SOME VIDEO OR GO BACK
-                while (true) {
-                    requestSocket2 = new Socket();
-                    System.out.println(videoList);
-                    String answer;
-                    try {
-                        System.out.print("Do you want to see a video from these? (y/n)");
-                        answer = in.nextLine();
+                boolean wantVideo = true;
+                while (wantVideo) {
+                    System.out.print("Do you want to see a video from these? (y/n)");
+                    String answer = in.nextLine();
 
-                        if (answer.equals("n")) {
-                            break;
-                        }
+                    if (answer.equals("y")) {
+                        try {
+                            requestSocket2 = new Socket();
 
-                        System.out.print("Give the Channel Name that you want to play: ");
-                        String channelName = in.nextLine();
+                            System.out.print("Give the Channel Name that you want to play: ");
+                            String channelName = in.nextLine();
 
-                        System.out.print("Give the video ID that you want to play: ");
-                        int videoID = in.nextInt();
+                            System.out.print("Give the video ID that you want to play: ");
+                            int videoID = in.nextInt();
 
-                        ChannelKey key = new ChannelKey(channelName, videoID);
+                            ChannelKey key = new ChannelKey(channelName, videoID);
 
-                        //CONNECTING TO BROKER RESPONSIBLE FOR CHANNEL, THAT HAS THE VIDEO WE ASKED FOR
-                        SocketAddress brokerAddress = hashTopic(channelName);
-                        connect2(brokerAddress);
+                            //CONNECTING TO BROKER RESPONSIBLE FOR CHANNEL, THAT HAS THE VIDEO WE ASKED FOR
+                            SocketAddress brokerAddress = hashTopic(channelName);
+                            connect2(brokerAddress);
 
-                        objectOutputStream2.writeObject(3);
-                        objectOutputStream2.flush();
+                            objectOutputStream2.writeObject(3);
+                            objectOutputStream2.flush();
 
-                        objectOutputStream2.writeObject(key);
-                        objectOutputStream2.flush();
+                            objectOutputStream2.writeObject(key);
+                            objectOutputStream2.flush();
 
-                        //CHECK IF CHANNEL NAME EXISTS
-//                        String message = (String) objectInputStream2.readObject();
-//                        System.out.println(message);
+                            //CHECK IF CHANNEL NAME EXISTS
+//                            String message = (String) objectInputStream2.readObject();
+//                            System.out.println(message);
 
-                        //RECEIVE VIDEO FILE CHUNKS
-                        byte[] chunk;
-                        ArrayList<byte[]> chunks = new ArrayList<byte[]>();
-                        int size = (int) objectInputStream2.readObject();
+                            //RECEIVE VIDEO FILE CHUNKS
+                            byte[] chunk;
+                            ArrayList<byte[]> chunks = new ArrayList<byte[]>();
+                            int size = (int) objectInputStream2.readObject();
 
-                        if (size == 0) {
-                            System.out.println("CHANNEL HAS NO VIDEO WITH THIS ID...");
-                        }
-                        else {
-                            for (int i = 0; i < size; i++) {
-                                chunk = new byte[4096];
-                                chunk = objectInputStream2.readAllBytes();
-                                chunks.add(chunk);
+                            if (size == 0) {
+                                System.out.println("CHANNEL HAS NO VIDEO WITH THIS ID...");
                             }
-                            try {
-                                File nf = new File("C:/Users/Kostas/Desktop/test.mp4");
-                                for (byte[] ar : chunks) {
-                                    FileOutputStream fw = new FileOutputStream(nf, true);
-                                    try {
-                                        fw.write(ar);
-                                    } finally {
-                                        fw.close();
-                                    }
+                            //REBUILD CHUNKS FOR TESTING
+                            else {
+                                for (int i = 0; i < size; i++) {
+                                    chunk = new byte[4096];
+                                    chunk = objectInputStream2.readAllBytes();
+                                    chunks.add(chunk);
                                 }
-                            } catch (IOException e) {
-                                e.printStackTrace();
+                                try {
+                                    File nf = new File("C:/Users/Kostas/Desktop/test.mp4");
+                                    for (byte[] ar : chunks) {
+                                        FileOutputStream fw = new FileOutputStream(nf, true);
+                                        try {
+                                            fw.write(ar);
+                                        } finally {
+                                            fw.close();
+                                        }
+                                    }
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
                             }
+                        } catch (IOException | ClassNotFoundException e) {
+                            e.printStackTrace();
+                        } finally {
+                            disconnect2();
                         }
-                        //REBUILD CHUNKS FOR TESTING
-
-                        //disconnect2();
-
-                    } catch (IOException | ClassNotFoundException e) {
-                        e.printStackTrace();
-                    } finally {
-                        disconnect2();
                     }
+                    else
+                        wantVideo = false;
                 }
             } else if (choice.equals("3")) {
 
@@ -551,10 +542,10 @@ public class AppNodeImpl implements Publisher, Consumer{
 
                 /**KOSTAS-START*/
                 HashMap<String, String> notificationHashtags = channel.updateVideoFile(video, hashtags, "ADD");;
-//                if (!notificationHashtags.isEmpty()) {
-//                    for (Map.Entry<String, String> item : notificationHashtags.entrySet())
-//                        notifyBrokersForHashTags(item.getKey(), item.getValue());
-//                }
+                if (!notificationHashtags.isEmpty()) {
+                    for (Map.Entry<String, String> item : notificationHashtags.entrySet())
+                        notifyBrokersForHashTags(item.getKey(), item.getValue());
+                }
                 /**KOSTAS-END*/
             } else if (choice.equals("5")) {
 
@@ -596,10 +587,10 @@ public class AppNodeImpl implements Publisher, Consumer{
 
                 /**KOSTAS-START*/
                 HashMap<String, String> notificationHashtags = channel.updateVideoFile(video, hashtags, "REMOVE");
-//                if (!notificationHashtags.isEmpty()) {
-//                    for (Map.Entry<String, String> item : notificationHashtags.entrySet())
-//                        notifyBrokersForHashTags(item.getKey(), item.getValue());
-//                }
+                if (!notificationHashtags.isEmpty()) {
+                    for (Map.Entry<String, String> item : notificationHashtags.entrySet())
+                        notifyBrokersForHashTags(item.getKey(), item.getValue());
+                }
                 /**KOSTAS-END*/
 
             } else if (choice.equals("6")) {
@@ -633,10 +624,10 @@ public class AppNodeImpl implements Publisher, Consumer{
                 VideoFile video = new VideoFile(filepath, associatedHashtags, videoTitle);
                 /**KOSTAS-START*/
                 HashMap<String, String> notificationHashtags = channel.addVideoFile(video);
-//                if (!notificationHashtags.isEmpty()) {
-//                    for (Map.Entry<String, String> item : notificationHashtags.entrySet())
-//                        notifyBrokersForHashTags(item.getKey(), item.getValue());
-//                }
+                if (!notificationHashtags.isEmpty()) {
+                    for (Map.Entry<String, String> item : notificationHashtags.entrySet())
+                        notifyBrokersForHashTags(item.getKey(), item.getValue());
+                }
                 /**KOSTAS-END*/
 
             } else if (choice.equals("7")){
@@ -657,10 +648,10 @@ public class AppNodeImpl implements Publisher, Consumer{
 
                 /**KOSTAS-START*/
                 HashMap<String, String> notificationHashtags = channel.removeVideoFile(video);
-//                if (!notificationHashtags.isEmpty()) {
-//                    for (Map.Entry<String, String> item : notificationHashtags.entrySet())
-//                        notifyBrokersForHashTags(item.getKey(), item.getValue());
-//                }
+                if (!notificationHashtags.isEmpty()) {
+                    for (Map.Entry<String, String> item : notificationHashtags.entrySet())
+                        notifyBrokersForHashTags(item.getKey(), item.getValue());
+                }
                 /**KOSTAS-END*/
             } else if (choice.equals("0")) {
                 end = 1;
