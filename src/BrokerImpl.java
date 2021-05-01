@@ -22,11 +22,14 @@ public class BrokerImpl implements Broker{
     private static List<Broker> brokers = null;
     private static List<Consumer> registeredUsers = null;
     private static List<Publisher> registeredPublishers = null;
-    private static HashMap<String, ArrayList<String>> hashtagPublisherMap;//<hashtag, ArrayList socketAddress>?
+    private static HashMap<String, ArrayList<SocketAddress>> hashtagPublisherMap;//<hashtag, ArrayList socketAddress>?
     private static ServerSocket serverSocket;
     private static HashMap<String, ArrayList<SocketAddress>> brokerHashtags;
     private static TreeMap<Integer, SocketAddress> brokerHashes;
     private static HashMap<String, SocketAddress> brokerChannelNames;
+
+    private static HashMap<String, ArrayList<SocketAddress>> hashtagSubscriptions;
+    private static HashMap<String, ArrayList<SocketAddress>> channelSubscriptions;
 
 
     public static void main(String[] args) {
@@ -112,7 +115,7 @@ public class BrokerImpl implements Broker{
 
     @Override
     public void notifyBrokersOnChanges() {
-
+        //MULTICAST CHANGES TO OTHER BROKERS
     }
 
     @Override
@@ -179,8 +182,8 @@ public class BrokerImpl implements Broker{
 
 
     @Override
-    public List<Broker> getBrokers() {
-        return brokers;
+    public TreeMap<Integer, SocketAddress> getBrokerMap() {
+        return null;
     }
 
     public void connect() {
@@ -224,12 +227,36 @@ public class BrokerImpl implements Broker{
                 // If-else statements and calling of specific acceptConnection.
 
                 /** Node Requests Handle */
-                if (option == 0) {  // Get Brokers
-
+                if (option == 8) {  // Get Brokers
+                    objectOutputStream.writeObject(brokerHashes);
                 }
 
                 /** Consumer - User Requests Handle */
-                else if (option == 1) {  // Register User
+                else if (option == 1) {  // User Subscription
+                    /**DIMITRIS*/
+                    String topic = (String) objectInputStream.readObject();
+
+                    if (Character.compare(topic.charAt(0),'#') == 0) {
+                        if (hashtagSubscriptions.containsKey(topic)) {
+                            ArrayList<SocketAddress> value = hashtagSubscriptions.get(topic);
+                            value.add(); //proper address
+                            hashtagSubscriptions.put(topic, value);
+                        } else {
+                            ArrayList<SocketAddress> value = new ArrayList<>();
+                            value.add(); //proper address
+                            hashtagSubscriptions.put(topic, value);
+                        }
+                    } else {
+                        if (channelSubscriptions.containsKey(topic)) {
+                            ArrayList<SocketAddress> value = channelSubscriptions.get(topic);
+                            value.add(); //proper address
+                            channelSubscriptions.put(topic, value);
+                        } else {
+                            ArrayList<SocketAddress> value = new ArrayList<>();
+                            value.add(); //proper address
+                            channelSubscriptions.put(topic, value);
+                        }
+                    }
 
                 } else if (option == 2) {  // Get Topic Video List
 
@@ -238,20 +265,44 @@ public class BrokerImpl implements Broker{
                 }
 
                 /** Publisher Requests Handle */
-                else if (option == 4) {  // Hash Topic?
+                else if (option == 4) {  // Hash Topic? OXI
 
                 } else if (option == 5) {  // Push?
 
                 } else if (option == 6) {  // Notify Failure?
 
                 } else if (option == 7) {  // Notify Brokers for Hashtags
-                    /**KOSTAS-START*/
-                    String newHashtag = (String) objectInputStream.readObject();
 
-                    //To key tou hashtag tha einai ylopoihmeno apo thn hashTopic!!!
-                    int key = calculateKeys(newHashtag);
-                    /**KOSTAS-END*/
-                    //Thelei ylopoihsh
+                    /**DIMITRIS*/
+                    String action = (String) objectInputStream.readObject();
+                    String hashtag = (String) objectInputStream.readObject();
+                    //String channel = (String) objectInputStream.readObject(); // MAYBE NEEDED TO STREAM VIDEO TO SUBSCRIBERS
+                    //int videoID =  (int) objectInputStream.readObject(); // MAYBE NEEDED TO STREAM VIDEO TO SUBSCRIBERS
+
+                    if (action.equals("ADD")) {
+                        if (hashtagPublisherMap.get(hashtag) == null) {
+                            ArrayList<SocketAddress> value = new ArrayList<>();
+                            value.add(this.socket.getRemoteSocketAddress());//??
+                            hashtagPublisherMap.put(hashtag, value);
+                        } else {
+                            ArrayList<SocketAddress> value = hashtagPublisherMap.get(hashtag);
+                            value.add(this.socket.getRemoteSocketAddress());//??
+                            hashtagPublisherMap.put(hashtag, value);
+                        }
+                    } else if (action.equals("REMOVE")) {
+                        if (hashtagPublisherMap.get(hashtag).size() > 1) {
+                            ArrayList<SocketAddress> value = hashtagPublisherMap.get(hashtag);
+                            value.remove(this.socket.getRemoteSocketAddress());//??
+                            hashtagPublisherMap.put(hashtag, value);
+                        } else {
+                            hashtagPublisherMap.remove(hashtag);
+                        }
+                    }
+
+                    //channel & hashtag subscriptions stream videos.
+
+                    notifyBrokersOnChanges();
+
                 }
 
             } catch (IOException | ClassNotFoundException e) {

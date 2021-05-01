@@ -1,3 +1,4 @@
+import javax.naming.ldap.SortKey;
 import java.io.*;
 import java.math.BigInteger;
 import java.net.*;
@@ -13,9 +14,8 @@ public class AppNodeImpl implements Publisher, Consumer{
     private static ObjectInputStream objectInputStream;  // SAME
     private static Channel channel;
 
-    //CHANGE
     private static TreeMap<Integer, SocketAddress> brokerHashes = new TreeMap<>();
-    //
+
 
     public static void main(String[] args) {
         new AppNodeImpl().initialize(4321);
@@ -24,24 +24,12 @@ public class AppNodeImpl implements Publisher, Consumer{
     @Override
     public void initialize(int port) {
 
-
         channel = new Channel("USER");
 
         new RequestHandler().start();
 
         runUser();
 
-        //THINK FOR TOMMOROW THE IMPLEMENTATION!
-
-        /**
-         channel = new ChannelName("user");
-
-         ArrayList<String> videoHashtags = new ArrayList<>();
-         videoHashtags.add("First File");
-
-         VideoFile vf = new VideoFile("C:\\Users\\miked\\Videos\\Captures\\Numb (Official Video) - Linkin Park - YouTube - Google Chrome 2020-04-03 14-10-06.mp4", videoHashtags);
-         push("#TIPOTES", vf);
-         */
     }
 
     @Override
@@ -55,8 +43,8 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
     @Override
-    public List<Broker> getBrokerList() {
-        return brokers;
+    public ArrayList<Broker> getBrokerList() {
+        return null;
     }
 
     @Override
@@ -136,14 +124,16 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
     @Override
-    public void notifyBrokersForHashTags(String hashtag) {//find apropriate broker by using hashtopic first.
+    public void notifyBrokersForHashTags(String hashtag, String action) {//find apropriate broker by using hashtopic first.
         /**KOSTAS-START*/
         //klhsh sth hashtopic -> SocketAddress
         //syndesi sto socketAddress
-        connect();
+        /**DIMITRIS*/
+        SocketAddress socketAddress = hashTopic(hashtag);
+        connect(socketAddress);
         try {
             objectOutputStream.writeObject(7);
-
+            objectOutputStream.writeObject(action);
             objectOutputStream.writeObject(hashtag);
         } catch (IOException ioException) {
             ioException.printStackTrace();
@@ -173,8 +163,29 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
     @Override
-    public List<Broker> getBrokers() {
-        return null;
+    public TreeMap<Integer, SocketAddress> getBrokerMap() {
+        /**DIMITRIS*/
+        connect();
+        try {
+            objectOutputStream.writeObject(0);
+            brokerHashes = (TreeMap<Integer, SocketAddress>) objectInputStream.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        } finally {
+            return brokerHashes;
+        }
+    }
+
+    private void connect(SocketAddress socketAddress) {
+        try {
+            requestSocket.connect(socketAddress);
+            objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
+            objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
+        } catch (UnknownHostException unknownHost) {
+            System.err.println("You are trying to connect to an unknown host.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -323,16 +334,15 @@ public class AppNodeImpl implements Publisher, Consumer{
         }
     }
 
-    public void runUser() {
+    private void runUser() {
         //BUILD INTERFACE
         Scanner in = new Scanner(System.in);
-        Scanner in2 = new Scanner(System.in);
         int end = 0;
         String choice;
         do {
             System.out.println("===== Menu =====");
             //Consumer Methods
-            System.out.println("1. Register User");
+            System.out.println("1. Subscribe to Topic or Channel");
             System.out.println("2. Get Topic Video List");
             System.out.println("3. Play Data");
             //Publisher Methods
@@ -341,13 +351,62 @@ public class AppNodeImpl implements Publisher, Consumer{
             System.out.println("6. Upload Video");
             System.out.println("7. Delete Video");
             System.out.println("0. Exit");
-            System.out.println("List with the brokers: " + this.getBrokerList());
             choice = in.nextLine();
             if (choice.equals("1")) {
+                /**DIMITRIS*/
+                String topic;
+                System.out.print("Please select a topic (hashtag/channel) that you want to subscribe: ");
+                topic = in.nextLine();
+
+                SocketAddress socketAddress = hashTopic(topic);
+                connect(socketAddress);
+
+                try {
+                    objectOutputStream.writeObject(1);
+                    objectOutputStream.flush();
+                    objectOutputStream.writeObject(topic);
+                    objectOutputStream.flush();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
 
             } else if (choice.equals("2")) {
 
+                /**DIMITRIS*/
+                String topic;
+                System.out.print("Please give a topic (hashtag/channel) that you want to search results for: ");
+                topic = in.nextLine();
+
+                SocketAddress socketAddress = hashTopic(topic);
+                connect(socketAddress);
+
+                try {
+                    objectOutputStream.writeObject(2);
+                    objectOutputStream.writeObject(topic);
+
+                    Object [][] topicVideoList = (Object[][]) objectInputStream.readObject();//ARRAY, HASHMAP?
+                    System.out.println(Arrays.toString(topicVideoList));
+                } catch (IOException | ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
+
             } else if (choice.equals("3")) {
+
+                String channelName;
+                int videoID;
+                System.out.print("Please give a topic (hashtag/channel) that you want to search results for: ");
+                channelName = in.nextLine();
+                videoID = Integer.parseInt(in.nextLine());
+
+                try {
+                    objectOutputStream.writeObject(3);
+                    objectOutputStream.writeObject(channelName);
+                    objectOutputStream.writeObject(videoID);
+
+                    //STREAM VIDEO
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
 
             } else if (choice.equals("4")) {
 
@@ -389,23 +448,6 @@ public class AppNodeImpl implements Publisher, Consumer{
 
                 channel.updateVideoFile(video, hashtags, "ADD", this);
 
-//                if (channel.getHashtagsPublished().contains(hashtag)) {
-//                    // Add video to the hashtagVideoFilesMap.
-//                    ArrayList<VideoFile> associatedVideos = channel.getVideoFiles_byHashtag(hashtag);
-//                    associatedVideos.add(video);
-//                    channel.addHashtagVideoFilesMapping(hashtag, associatedVideos);
-//                } else {
-//                    // Add video to the hashtagVideoFilesMap.
-//                    ArrayList<VideoFile> associatedVideos = new ArrayList<>();
-//                    associatedVideos.add(video);
-//                    channel.addHashtagVideoFilesMapping(hashtag, associatedVideos);
-//
-//                    // Add hashtag to the channel's Published Hashtags.
-//                    channel.addHashTag(hashtag);
-//                    // Brokers notification needed about new hashtag in channel.
-//                    notifyBrokersForHashTags(hashtag);
-//                }
-
             } else if (choice.equals("5")) {
 
                 int videoID;
@@ -445,23 +487,6 @@ public class AppNodeImpl implements Publisher, Consumer{
                 }
 
                 channel.updateVideoFile(video, hashtags, "REMOVE", this);
-
-//                if (channel.getVideoFiles_byHashtag(hashtag).size() > 1) {
-//                    // Remove video from the hashtagVideoFilesMap.
-//                    ArrayList<VideoFile> associatedVideos = channel.getVideoFiles_byHashtag(hashtag);
-//                    associatedVideos.remove(video);
-//                    channel.addHashtagVideoFilesMapping(hashtag, associatedVideos);
-//                } else {
-//                    // Remove video from the hashtagVideoFilesMap.
-//                    ArrayList<VideoFile> associatedVideos = new ArrayList<>();
-//                    associatedVideos.add(video);
-//                    channel.removeHashtagVideoFilesMapping(hashtag, associatedVideos);
-//
-//                    // Remove hashtag from the channel's Published Hashtags.
-//                    channel.removeHashTag(hashtag);
-//                    // Brokers notification needed about new hashtag in channel.
-//                    notifyBrokersForHashTags(hashtag);
-//                }
 
             } else if (choice.equals("6")) {
 

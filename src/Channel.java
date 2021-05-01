@@ -55,7 +55,7 @@ public class Channel {
                 hashtagVideoFilesMap.put(hashtag, value);
 
                 hashtagsPublished.add(hashtag);
-                appNode.notifyBrokersForHashTags(hashtag);
+                appNode.notifyBrokersForHashTags(hashtag, "ADD");
             }
         }
     }
@@ -70,7 +70,7 @@ public class Channel {
                 hashtagVideoFilesMap.remove(hashtag);
 
                 hashtagsPublished.remove(hashtag);
-                appNode.notifyBrokersForHashTags(hashtag);
+                appNode.notifyBrokersForHashTags(hashtag, "REMOVE");
             } else {
                 ArrayList<VideoFile> value = hashtagVideoFilesMap.get(hashtag);
                 value.remove(video);
@@ -80,7 +80,7 @@ public class Channel {
     }
 
     public void updateVideoFile(VideoFile video, ArrayList<String> hashtags, String method, AppNodeImpl appNode) {
-        if (method == "ADD") {
+        if (method.equals("ADD")) {
             for (String hashtag : hashtags) {
                 video.addHashtag(hashtag);
                 if (hashtagsPublished.contains(hashtag)) {
@@ -97,10 +97,10 @@ public class Channel {
                     // Add hashtag to the channel's Published Hashtags.
                     hashtagsPublished.add(hashtag);
                     // Brokers notification needed about new hashtag in channel.
-                    appNode.notifyBrokersForHashTags(hashtag);
+                    appNode.notifyBrokersForHashTags(hashtag, "ADD");
                 }
             }
-        } else if (method == "REMOVE") {
+        } else if (method.equals("REMOVE")) {
             for (String hashtag : hashtags) {
                 video.removeHashtag(hashtag);
                 if (getVideoFiles_byHashtag(hashtag).size() > 1) {
@@ -115,7 +115,7 @@ public class Channel {
                     // Remove hashtag from the channel's Published Hashtags.
                     hashtagsPublished.remove(hashtag);
                     // Brokers notification needed about new hashtag in channel.
-                    appNode.notifyBrokersForHashTags(hashtag);
+                    appNode.notifyBrokersForHashTags(hashtag, "REMOVE");
                 }
             }
         } else {
@@ -158,7 +158,7 @@ public class Channel {
         String channelString;
         channelString = "Printing Contents of channel " + channelName + "\r\n";
         for (int id : ID_VideoNameMap.keySet()) {
-            channelString += String.valueOf(id) + ": " + ID_VideoFileMap.get(id) + "\r\n";
+            channelString += String.valueOf(id) + ": " + ID_VideoFileMap.get(id).getVideoName() + "\r\n";
         }
         return channelString;
     }
