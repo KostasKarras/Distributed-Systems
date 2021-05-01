@@ -195,11 +195,6 @@ public class BrokerImpl implements Broker{
                     HashMap<ChannelKey, String> videoList;
 
                     if (channel_or_hashtag.charAt(0) == '#') {
-                        //TEST CODE : I ADDED A HASHTAG IN BROKER HASHTAGS TO CHECK FUNCTION
-                        ArrayList<SocketAddress> hashtagRelatedChannels = new ArrayList<>();
-                        hashtagRelatedChannels.add(socket.getRemoteSocketAddress());
-                        brokerHashtags.put(channel_or_hashtag, hashtagRelatedChannels);
-                        //
                         ArrayList<SocketAddress> addresses = brokerHashtags.get(channel_or_hashtag);
                         videoList = pull_operation.pullHashtags(channel_or_hashtag, addresses);
                     } else {
@@ -216,11 +211,10 @@ public class BrokerImpl implements Broker{
 
                         //RECEIVE CHANNEL KEY AND EXTRACT SOCKET ADDRESS OF PUBLISHER
                         ChannelKey key = (ChannelKey) objectInputStream.readObject();
-                        //SocketAddress publisherAddress = brokerChannelNames.get(key.getChannelName());
                         InetAddress inetAddress = InetAddress.getByName("127.0.0.1");
                         SocketAddress publisherAddress = new InetSocketAddress(inetAddress, 4950);
-                        //requestSocket2.bind(socketAddress);
-                        //requestSocket2.connect(socketAddress);
+                        System.out.println((InetSocketAddress)brokerChannelNames.get(key.getChannelName()));
+
 
                         //PULL VIDEO FROM PUBLISHER
                         ArrayList<byte[]> video_chunks = pull_operation.pullVideo(key, publisherAddress);
@@ -266,22 +260,21 @@ public class BrokerImpl implements Broker{
 
                     String hashtag = (String) objectInputStream.readObject();
                     String message = (String) objectInputStream.readObject();
-                    SocketAddress notificationSocket = (SocketAddress) objectInputStream.readObject();
-                    if (message.equals("add")) {
+                    if (message.equals("ADD")) {
                         if (brokerHashtags.containsKey(hashtag)) {
-                            if (brokerHashtags.get(hashtag).contains(notificationSocket))
+                            if (brokerHashtags.get(hashtag).contains(socket.getRemoteSocketAddress()))
                                 System.out.println("Publisher is already in the List.");
                             else
-                                brokerHashtags.get(hashtag).add(notificationSocket);
+                                brokerHashtags.get(hashtag).add(socket.getRemoteSocketAddress());
                         } else {
                             ArrayList<SocketAddress> Sockets = new ArrayList<>();
-                            Sockets.add(notificationSocket);
+                            Sockets.add(socket.getRemoteSocketAddress());
                             brokerHashtags.put(hashtag, Sockets);
                         }
                     } else {
                         if (brokerHashtags.containsKey(hashtag)) {
                             if (brokerHashtags.get(hashtag).size() > 1)
-                                brokerHashtags.get(hashtag).remove(notificationSocket);
+                                brokerHashtags.get(hashtag).remove(socket.getRemoteSocketAddress());
                             else {
                                 brokerHashtags.remove(hashtag);
                             }
@@ -290,31 +283,8 @@ public class BrokerImpl implements Broker{
                         }
                     }
 
-                    /**DIMITRIS-START. Wrong socketAddress. Need to get only IP. */
-                    String action = (String) objectInputStream.readObject();
-                    String hashtag2 = (String) objectInputStream.readObject();
-
-                    if (action.equals("ADD")) {
-                        if (brokerHashtags.get(hashtag2) == null) {
-                            ArrayList<SocketAddress> value = new ArrayList<>();
-                            value.add(this.socket.getRemoteSocketAddress());
-                            brokerHashtags.put(hashtag2, value);
-                        } else {
-                            ArrayList<SocketAddress> value = brokerHashtags.get(hashtag2);
-                            value.add(this.socket.getRemoteSocketAddress());//??
-                            brokerHashtags.put(hashtag2, value);
-                        }
-                    } else if (action.equals("REMOVE")) {
-                        if (brokerHashtags.get(hashtag2).size() > 1) {
-                            ArrayList<SocketAddress> value = brokerHashtags.get(hashtag2);
-                            value.remove(this.socket.getRemoteSocketAddress());//??
-                            brokerHashtags.put(hashtag2, value);
-                        } else {
-                            brokerHashtags.remove(hashtag2);
-                        }
-                    }
-
-                    notifyBrokersOnChanges();
+                    /**DIMITRIS-START*/
+//                    notifyBrokersOnChanges();
                     /**DIMITRIS-END */
 
                 }
@@ -395,7 +365,7 @@ public class BrokerImpl implements Broker{
 
                 //INITIALIZE MULTICAST SOCKET
                 int multicastPort = 5000;
-                InetAddress brokerIP = InetAddress.getByName("192.168.2.2");
+                InetAddress brokerIP = InetAddress.getByName("192.168.2.4");
                 SocketAddress multicastSocketAddress = new InetSocketAddress(brokerIP, multicastPort);
                 multicastSocket = new MulticastSocket(multicastSocketAddress);
 
