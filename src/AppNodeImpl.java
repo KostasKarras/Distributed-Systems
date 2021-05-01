@@ -28,9 +28,31 @@ public class AppNodeImpl implements Publisher, Consumer{
         //CHANNEL NAME
         channel = new Channel("USER");
 
-        //FIRST CONNECTION
         connect();
+        SocketAddress socketAddress = null;
+        try {
+            socketAddress = (SocketAddress) objectInputStream.readObject();
+            System.out.println(socketAddress);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        disconnect();
 
+        connect2(socketAddress);
+        try {
+            socketAddress = (SocketAddress) objectInputStream.readObject();
+            System.out.println(socketAddress);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
+
+        //FIRST CONNECTION
+            /*
         try {
 
             //THAT IS NOT CORRECT YET
@@ -58,8 +80,8 @@ public class AppNodeImpl implements Publisher, Consumer{
         } finally {
             disconnect();
         }
-
-        new RequestHandler(serverSocket).start();
+             */
+        new RequestHandler().start();
 
         new Multicast_Handler().start();
 
@@ -204,11 +226,26 @@ public class AppNodeImpl implements Publisher, Consumer{
         }
     }
 
-    /** Check if it runs, to simplify things */
+    @Override
+    public void connect() {
+
+        try {
+            requestSocket = new Socket(InetAddress.getByName("127.0.0.1"), 4321);
+            objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
+            objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
+        } catch (UnknownHostException unknownHost) {
+            System.err.println("You are trying to connect to an unknown host.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+
     private void connect2(SocketAddress socketAddress) {
         try {
             String[] ipPort = socketAddress.toString().split(":");
-            InetAddress ip = InetAddress.getByName(ipPort[0].substring(1));
+            InetAddress ip = InetAddress.getByName(ipPort[0].substring(10));
             requestSocket = new Socket(ip, 4321);
             objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
             objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
@@ -218,7 +255,21 @@ public class AppNodeImpl implements Publisher, Consumer{
             e.printStackTrace();
         }
     }
-    /**DIMITRIS-END*/
+
+    /*
+    private void connect2(SocketAddress socketAddress) {
+        try {
+            InetAddress inetAddress = InetAddress.getByName("127.0.0.1");
+            socketAddress = new InetSocketAddress(inetAddress, 4321);
+            //requestSocket2.bind(socketAddress);
+            requestSocket.connect(socketAddress);
+            objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
+            objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    */
 
     @Override
     public ArrayList<byte[]> generateChunks(VideoFile video) {
@@ -244,20 +295,6 @@ public class AppNodeImpl implements Publisher, Consumer{
         return brokers;
     }
 
-    @Override
-    public void connect() {
-
-        try {
-            requestSocket = new Socket(InetAddress.getByName("127.0.0.1"), 4321);
-            objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
-            objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
-        } catch (UnknownHostException unknownHost) {
-            System.err.println("You are trying to connect to an unknown host.");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-    }
 
     public void disconnect() {
         try {
@@ -309,15 +346,13 @@ public class AppNodeImpl implements Publisher, Consumer{
 
         public ServerSocket serverSocket;
         public Socket connectionSocket;
+        private static final int port = 4900;
         private int current_threads = 1;
-
-        public RequestHandler(ServerSocket serverSocket) {
-            this.serverSocket = serverSocket;
-        }
 
         public void run() {
 
             try {
+                serverSocket = new ServerSocket(port);
 
                 while(true) {
                     connectionSocket = serverSocket.accept();
@@ -412,7 +447,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
                 //INITIALIZE MULTICAST SOCKET
                 int multicastPort = 5000;
-                InetAddress brokerIP = InetAddress.getByName("192.168.1.179");
+                InetAddress brokerIP = InetAddress.getByName("192.168.1.184");
                 SocketAddress multicastSocketAddress = new InetSocketAddress(brokerIP, multicastPort);
                 multicastSocket = new MulticastSocket(multicastSocketAddress);
 
@@ -456,7 +491,7 @@ public class AppNodeImpl implements Publisher, Consumer{
     public void runUser() {
         //BUILD INTERFACE
         Scanner in = new Scanner(System.in);
-        Scanner in2 = new Scanner(System.in);
+
         int end = 0;
         String choice;
         do {
@@ -471,7 +506,6 @@ public class AppNodeImpl implements Publisher, Consumer{
             System.out.println("6. Upload Video");
             System.out.println("7. Delete Video");
             System.out.println("0. Exit");
-            //System.out.println("List with the brokers: " + brokers);
             choice = in.nextLine();
             if (choice.equals("1")) {
 

@@ -42,8 +42,9 @@ public class BrokerImpl implements Broker{
         Socket connectionSocket = null;
 
         try {
-            serverSocket = new ServerSocket(port);
-            System.out.println(serverSocket.getInetAddress());
+            //CREATE SERVER SOCKET (FOR EACH BROKER IP WILL BE DIFFERENT)
+            InetAddress serverIP = InetAddress.getByName("localhost");
+            serverSocket = new ServerSocket(port, 50, serverIP);
 
             userMulticastIP = InetAddress.getByName("228.5.6.8");
 
@@ -384,7 +385,7 @@ public class BrokerImpl implements Broker{
 
                 //INITIALIZE MULTICAST SOCKET
                 int multicastPort = 5000;
-                InetAddress brokerIP = InetAddress.getByName("192.168.1.179");
+                InetAddress brokerIP = InetAddress.getByName("192.168.1.184");
                 SocketAddress multicastSocketAddress = new InetSocketAddress(brokerIP, multicastPort);
                 multicastSocket = new MulticastSocket(multicastSocketAddress);
 
