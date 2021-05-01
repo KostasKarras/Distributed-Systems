@@ -541,7 +541,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                 }
 
                 /**KOSTAS-START*/
-                HashMap<String, String> notificationHashtags = channel.updateVideoFile(video, hashtags, "ADD");;
+                HashMap<String, String> notificationHashtags = channel.updateVideoFile(video, hashtags, "ADD");
                 if (!notificationHashtags.isEmpty()) {
                     for (Map.Entry<String, String> item : notificationHashtags.entrySet())
                         notifyBrokersForHashTags(item.getKey(), item.getValue());
