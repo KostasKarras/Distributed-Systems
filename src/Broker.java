@@ -15,7 +15,5 @@ interface Broker extends Node{
 
     public void notifyBrokersOnChanges();
 
-    public void pull(String channel_or_hashtag);
-
     public void filterConsumers( );
 }
