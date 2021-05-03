@@ -58,7 +58,7 @@ public class BrokerImpl implements Broker{
             ID = String.format("Broker_%s", serverSocketAddress);
             brokerHash = calculateKeys(ID);
             brokerHashes.put(brokerHash, serverSocket.getLocalSocketAddress());
-            //notify other brokers for this ^^^^^
+            //notify other brokers for this ^^^^^!!!!!!!!!!!!
 
             while(true) {
                 connectionSocket = serverSocket.accept();
@@ -236,24 +236,29 @@ public class BrokerImpl implements Broker{
                     /**DIMITRIS*/
                     String topic = (String) objectInputStream.readObject();
 
+                    //MAJOR FIX!!!!!!!!!!!!!!
+
+                    InetAddress ip_address = ((InetSocketAddress) socket.getRemoteSocketAddress()).getAddress();
+                    SocketAddress user_hear_address = new InetSocketAddress(ip_address, 4900);
+
                     if (Character.compare(topic.charAt(0),'#') == 0) {
                         if (hashtagSubscriptions.containsKey(topic)) {
                             ArrayList<SocketAddress> value = hashtagSubscriptions.get(topic);
-                            value.add(); //proper address
+                            value.add(user_hear_address); //proper address
                             hashtagSubscriptions.put(topic, value);
                         } else {
                             ArrayList<SocketAddress> value = new ArrayList<>();
-                            value.add(); //proper address
+                            value.add(user_hear_address); //proper address
                             hashtagSubscriptions.put(topic, value);
                         }
                     } else {
                         if (channelSubscriptions.containsKey(topic)) {
                             ArrayList<SocketAddress> value = channelSubscriptions.get(topic);
-                            value.add(); //proper address
+                            value.add(user_hear_address); //proper address
                             channelSubscriptions.put(topic, value);
                         } else {
                             ArrayList<SocketAddress> value = new ArrayList<>();
-                            value.add(); //proper address
+                            value.add(user_hear_address); //proper address
                             channelSubscriptions.put(topic, value);
                         }
                     }
@@ -276,8 +281,9 @@ public class BrokerImpl implements Broker{
                     /**DIMITRIS*/
                     String action = (String) objectInputStream.readObject();
                     String hashtag = (String) objectInputStream.readObject();
-                    //String channel = (String) objectInputStream.readObject(); // MAYBE NEEDED TO STREAM VIDEO TO SUBSCRIBERS
-                    //int videoID =  (int) objectInputStream.readObject(); // MAYBE NEEDED TO STREAM VIDEO TO SUBSCRIBERS
+
+//                    String channel = (String) objectInputStream.readObject(); // MAYBE NEEDED TO STREAM VIDEO TO SUBSCRIBERS
+//                    int videoID =  (int) objectInputStream.readObject(); // MAYBE NEEDED TO STREAM VIDEO TO SUBSCRIBERS
 
                     if (action.equals("ADD")) {
                         if (hashtagPublisherMap.get(hashtag) == null) {
@@ -289,6 +295,23 @@ public class BrokerImpl implements Broker{
                             value.add(this.socket.getRemoteSocketAddress());//??
                             hashtagPublisherMap.put(hashtag, value);
                         }
+                        /**CHANGE*/
+                        //Notify subscribed Users.
+//                        ArrayList<SocketAddress> subscribedInChannel = channelSubscriptions.get(channel);
+                        ArrayList<SocketAddress> subscribedInHashtag = hashtagSubscriptions.get(hashtag);
+
+//                        if (subscribedInChannel != null) {
+//                            for (SocketAddress user_address : subscribedInChannel) {
+//                                new Notifier(user_address, channel, videoID).start();
+//                            }
+//                        }
+
+                        if (subscribedInHashtag != null) {
+                            for (SocketAddress user_address : subscribedInHashtag) {
+                                return;
+                            }
+                        }
+                        /**END CHANGE*/
                     } else if (action.equals("REMOVE")) {
                         if (hashtagPublisherMap.get(hashtag).size() > 1) {
                             ArrayList<SocketAddress> value = hashtagPublisherMap.get(hashtag);
@@ -307,6 +330,60 @@ public class BrokerImpl implements Broker{
 
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
+            }
+        }
+
+        /**NEW HANDLER TO SEND NOTIFICATION FOR NEW VIDEOS TO SUBSCRIBED USERS*/
+        class Notifier extends Thread {
+
+            Socket socket;
+            ObjectInputStream objectInputStream;
+            ObjectOutputStream objectOutputStream;
+            String channel;
+            int videoID;
+            String hashtag;
+
+            /** Construct a Handler */
+            Notifier(SocketAddress socketAddress, String channel, int videoID, String hashtag) {
+                this.channel = channel;
+                this.videoID = videoID;
+                this.hashtag = hashtag;
+                Socket connectionSocket = new Socket();
+                try {
+                    connectionSocket.connect(socketAddress);
+                    objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
+                    objectInputStream = new ObjectInputStream(socket.getInputStream());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            public void run() {
+
+                String message;
+
+                if (hashtag == null) {
+                    message = "A new video has been uploaded from the channel: " + channel + "that you follow.";
+                } else {
+                    message = "A new video has been uploaded from the hashtag: " + hashtag + "that you follow.";
+                }
+
+                String action_message = "Do you want to play this video? (y/n)";
+
+                String response = null;
+
+                try {
+                    objectOutputStream.writeObject(message);
+                    objectOutputStream.writeObject(action_message);
+                    response = (String) objectInputStream.readObject();
+                } catch (IOException | ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
+
+                if (response == "y") {
+                    ChannelKey channelKey = new ChannelKey(channel, videoID);
+                    playData(channelKey);
+                }
             }
         }
 
