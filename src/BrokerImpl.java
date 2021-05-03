@@ -1,16 +1,22 @@
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.math.BigInteger;
-import java.net.*;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.MulticastSocket;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.stream.IntStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.TreeMap;
 
 public class BrokerImpl implements Broker{
 
@@ -18,14 +24,18 @@ public class BrokerImpl implements Broker{
     private static String ID;
     private static int brokerHash;
     private static int current_threads = 1;
+
     private static List<Broker> brokers = null;
     private static List<Consumer> registeredUsers = null;
     private static List<Publisher> registeredPublishers = null;
+
     private static ServerSocket serverSocket;
+
     private static HashMap<String, ArrayList<SocketAddress>> brokerHashtags;
     private static TreeMap<Integer, SocketAddress> brokerHashes;
     private static HashMap<String, SocketAddress> brokerChannelNames;
 
+    private static InetAddress userMulticastIP;
 
     public static void main(String[] args) {
 
@@ -45,8 +55,9 @@ public class BrokerImpl implements Broker{
         Socket connectionSocket = null;
 
         try {
-            serverSocket = new ServerSocket(port);
+            serverSocket = new ServerSocket(port, 60, InetAddress.getByName("localhost"));
 
+            userMulticastIP = InetAddress.getByName("228.5.6.8");
 
             //HANDLE MULTICAST
             new Multicast_Handler().start();
@@ -113,6 +124,7 @@ public class BrokerImpl implements Broker{
 
     @Override
     public void notifyBrokersOnChanges() {
+        connect();
 
     }
 
@@ -148,7 +160,9 @@ public class BrokerImpl implements Broker{
         ObjectInputStream objectInputStream;
         ObjectOutputStream objectOutputStream;
 
-        /** Construct a Handler */
+        /**
+         * Construct a Handler
+         */
         Handler(Socket s, int current_thread) {
             socket = s;
             threadNumber = current_thread;
@@ -166,7 +180,6 @@ public class BrokerImpl implements Broker{
             try {
                 int option = (int) objectInputStream.readObject();
                 // If-else statements and calling of specific acceptConnection.
-
                 /** Node Requests Handle */
                 if (option == 0) {  // Get Brokers
 
@@ -180,31 +193,59 @@ public class BrokerImpl implements Broker{
                     PullOperation pull_operation = new PullOperation();
 
                     String channel_or_hashtag = (String) objectInputStream.readObject();
+                    HashMap<ChannelKey, String> videoList = null;
 
                     if (channel_or_hashtag.charAt(0) == '#') {
-                        //TEST CODE : I ADDED A HASHTAG IN BROKER HASHTAGS TO CHECK FUNCTION
-                        ArrayList<SocketAddress> hashtagRelatedChannels= new ArrayList<>();
-                        hashtagRelatedChannels.add(socket.getRemoteSocketAddress());
-                        brokerHashtags.put(channel_or_hashtag, hashtagRelatedChannels);
-                        //
                         ArrayList<SocketAddress> addresses = brokerHashtags.get(channel_or_hashtag);
-                        HashMap<ChannelKey, String> hashtagVideoList =
-                                pull_operation.pullHashtags(channel_or_hashtag, addresses);
-                        System.out.println(hashtagVideoList);
-                    }
-                    else {
+                        if (addresses != null)
+                            videoList = pull_operation.pullHashtags(channel_or_hashtag, addresses);
+                    } else {
                         SocketAddress publisherAddress = brokerChannelNames.get(channel_or_hashtag);
-                        HashMap<Integer, String> channelVideoList =
-                                pull_operation.pullChannel(publisherAddress);
-                        System.out.println(channelVideoList);
+                        if (publisherAddress != null)
+                            videoList = pull_operation.pullChannel(publisherAddress);
                     }
+                    objectOutputStream.writeObject(videoList);
 
-                } else if (option == 3) {  // Play Data
 
-                }
+                } else if (option == 3) {// Play Data
 
-                /** Publisher Requests Handle */
-                else if (option == 4) {  // Hash Topic?
+                    try {
+                        PullOperation pull_operation = new PullOperation();
+
+                        //RECEIVE CHANNEL KEY AND EXTRACT SOCKET ADDRESS OF PUBLISHER
+                        ChannelKey key = (ChannelKey) objectInputStream.readObject();
+                        SocketAddress publisherAddress = brokerChannelNames.get(key.getChannelName());
+
+                        //PULL VIDEO FROM PUBLISHER
+                        ArrayList<byte[]> video_chunks = pull_operation.pullVideo(key, publisherAddress);
+
+                        //SEND VIDEO CHUNKS
+                        objectOutputStream.writeObject(video_chunks.size());
+                        objectOutputStream.flush();
+
+                        while (!video_chunks.isEmpty()) {
+                            byte[] clientToServer = video_chunks.remove(0);
+                            objectOutputStream.write(clientToServer);
+                            objectOutputStream.flush();
+                        }
+
+                    } catch (IOException | ClassNotFoundException ioException) {
+                        ioException.printStackTrace();
+                    } catch (NoSuchElementException nsee) {
+                        objectOutputStream.writeObject("This channel doesn't exist");
+                        objectOutputStream.flush();
+                    }
+                } else if (option == 4) { //FIRST CONNECTION
+                    //SEND BROKER HASHES
+                    objectOutputStream.writeObject(brokerHashes);
+                    objectOutputStream.flush();
+
+                    //RECEIVE CHANNEL NAME
+                    String channel_name = (String) objectInputStream.readObject();
+                    SocketAddress socketAddress = (SocketAddress) objectInputStream.readObject();
+                    brokerChannelNames.put(channel_name, socketAddress);
+
+                    /** Publisher Requests Handle */
 
                 } else if (option == 5) {  // Push?
 
@@ -213,113 +254,38 @@ public class BrokerImpl implements Broker{
                 } else if (option == 7) {  // Notify Brokers for Hashtags
 
                     String hashtag = (String) objectInputStream.readObject();
-                    String message = (String) objectInputStream.readObject();
-                    SocketAddress notificationSocket = (SocketAddress) objectInputStream.readObject();
-                    if (message.equals("add")) {
-                        if (brokerHashtags.containsKey(hashtag)) {
-                            if (brokerHashtags.get(hashtag).contains(notificationSocket))
-                                System.out.println("Publisher is already in the List.");
-                            else
-                                brokerHashtags.get(hashtag).add(notificationSocket);
-                        } else {
-                            ArrayList<SocketAddress> Sockets = new ArrayList<>();
-                            Sockets.add(notificationSocket);
-                            brokerHashtags.put(hashtag, Sockets);
-                        }
-                    } else {
-                        if (brokerHashtags.containsKey(hashtag)) {
-                            if (brokerHashtags.get(hashtag).size() > 1)
-                                brokerHashtags.get(hashtag).remove(notificationSocket);
-                            else {
-                                brokerHashtags.remove(hashtag);
-                            }
-                        } else {
-                            System.out.println("No Publisher is responsible for hashtag: " + hashtag);
-                        }
-                }
-
-                    /**DIMITRIS-START. Wrong socketAddress. Need to get only IP. */
                     String action = (String) objectInputStream.readObject();
-                    String hashtag2 = (String) objectInputStream.readObject();
+                    SocketAddress socketAddress = (SocketAddress) objectInputStream.readObject();
 
                     if (action.equals("ADD")) {
-                        if (brokerHashtags.get(hashtag2) == null) {
+                        if (brokerHashtags.get(hashtag) == null) {
                             ArrayList<SocketAddress> value = new ArrayList<>();
-                            value.add(this.socket.getRemoteSocketAddress());
-                            brokerHashtags.put(hashtag2, value);
+                            value.add(socketAddress);
+                            brokerHashtags.put(hashtag, value);
                         } else {
-                            ArrayList<SocketAddress> value = brokerHashtags.get(hashtag2);
-                            value.add(this.socket.getRemoteSocketAddress());//??
-                            brokerHashtags.put(hashtag2, value);
+                            ArrayList<SocketAddress> value = brokerHashtags.get(hashtag);
+                            value.add(socketAddress);
+                            brokerHashtags.put(hashtag, value);
                         }
                     } else if (action.equals("REMOVE")) {
-                        if (brokerHashtags.get(hashtag2).size() > 1) {
-                            ArrayList<SocketAddress> value = brokerHashtags.get(hashtag2);
-                            value.remove(this.socket.getRemoteSocketAddress());//??
-                            brokerHashtags.put(hashtag2, value);
+                        if (brokerHashtags.get(hashtag).size() > 1) {
+                            ArrayList<SocketAddress> value = brokerHashtags.get(hashtag);
+                            value.remove(socketAddress);
+                            brokerHashtags.put(hashtag, value);
                         } else {
-                            brokerHashtags.remove(hashtag2);
+                            brokerHashtags.remove(hashtag);
                         }
                     }
-
-                    notifyBrokersOnChanges();
-                    /**DIMITRIS-END */
-
                 }
-            } catch (IOException | ClassNotFoundException e) {
-                e.printStackTrace();
-            }
-        }
-
-        public void handle_push() {
-            try {
-
-                String message;
-                message = (String) objectInputStream.readObject();
-                if(message.equals("I want to push a new video!"))
-                    System.out.println(socket.getInetAddress().getHostAddress() + ">New Client connected.");
-
-                objectOutputStream.writeObject("Video is pushed...");
-                objectOutputStream.flush();
-
-                byte[] chunk;
-                ArrayList<byte[]> chunks = new ArrayList<byte[]>();
-
-                int size = (int) objectInputStream.readObject();
-                System.out.println("Size of the Arraylist is: " + size);
-
-                for (int i = 0;i < size;i++){
-                    chunk = new byte[4096];
-                    chunk = objectInputStream.readAllBytes();
-                    chunks.add(chunk);
-                    System.out.println(this.socket.getInetAddress().getHostAddress() + ">" + chunk);
-                }
-
-                System.out.println("My Arraylist size: " + chunks.size());
-
                 try {
-                    File nf = new File("C:/Users/miked/Desktop/test.mp4");
-                    for (byte[] ar : chunks) {
-                        FileOutputStream fw = new FileOutputStream(nf, true);
-                        try {
-                            fw.write(ar);
-                        } finally {
-                            fw.close();
-                        }
-                    }
+                    objectInputStream.close();
+                    objectOutputStream.close();
+                    socket.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
-            } finally {
-                try {
-                    objectInputStream.close();
-                    objectOutputStream.close();
-                    socket.close();
-                } catch (IOException ioException) {
-                    ioException.printStackTrace();
-                }
             }
         }
     }
@@ -336,7 +302,7 @@ public class BrokerImpl implements Broker{
 
                 //INITIALIZE MULTICAST SOCKET
                 int multicastPort = 5000;
-                InetAddress brokerIP = InetAddress.getByName("192.168.2.54");
+                InetAddress brokerIP = InetAddress.getByName("192.168.2.4");
                 SocketAddress multicastSocketAddress = new InetSocketAddress(brokerIP, multicastPort);
                 multicastSocket = new MulticastSocket(multicastSocketAddress);
 
@@ -347,7 +313,6 @@ public class BrokerImpl implements Broker{
                 //INITIALIZE DATAGRAM PACKET
                 byte buf[] = new byte[1000];
                 packet_receiver = new DatagramPacket(buf, buf.length);
-
             }
             catch (IOException ioException) {
                 ioException.printStackTrace();
@@ -376,6 +341,4 @@ public class BrokerImpl implements Broker{
             }
         }
     }
-
-
 }
