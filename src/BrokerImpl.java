@@ -55,7 +55,7 @@ public class BrokerImpl implements Broker{
         Socket connectionSocket = null;
 
         try {
-            serverSocket = new ServerSocket(port);
+            serverSocket = new ServerSocket(port, 60, InetAddress.getByName("localhost"));
 
             userMulticastIP = InetAddress.getByName("228.5.6.8");
 
@@ -180,20 +180,6 @@ public class BrokerImpl implements Broker{
             try {
                 int option = (int) objectInputStream.readObject();
                 // If-else statements and calling of specific acceptConnection.
-
-                //MICHAEL
-                if (option == -1) {
-                    try {
-                        objectInputStream.close();
-                        objectOutputStream.close();
-                        socket.close();
-                        return;
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-                //END OF MICHAEL
-
                 /** Node Requests Handle */
                 if (option == 0) {  // Get Brokers
 
@@ -277,11 +263,9 @@ public class BrokerImpl implements Broker{
                             value.add(socketAddress);
                             brokerHashtags.put(hashtag, value);
                         } else {
-                            if(!brokerHashtags.get(hashtag).contains(socketAddress)) {
-                                ArrayList<SocketAddress> value = brokerHashtags.get(hashtag);
-                                value.add(socketAddress);//??
-                                brokerHashtags.put(hashtag, value);
-                            }
+                            ArrayList<SocketAddress> value = brokerHashtags.get(hashtag);
+                            value.add(socketAddress);//??
+                            brokerHashtags.put(hashtag, value);
                         }
                     } else if (action.equals("REMOVE")) {
                         if (brokerHashtags.get(hashtag).size() > 1) {
@@ -294,7 +278,6 @@ public class BrokerImpl implements Broker{
                             brokerHashtags.remove(hashtag);
                         }
                     }
-//                    notifyBrokersOnChanges();
                 }
                 try {
                     objectInputStream.close();
