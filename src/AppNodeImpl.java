@@ -27,13 +27,8 @@ public class AppNodeImpl implements Publisher, Consumer{
     private static ObjectOutputStream objectOutputStream;
     private static ObjectInputStream objectInputStream;
 
-    private static Socket requestSocket2;
-    private static ObjectOutputStream objectOutputStream2;
-    private static ObjectInputStream objectInputStream2;
-
     private static Channel channel;
 
-    private static ServerSocket serverSocket;
     private static TreeMap<Integer, SocketAddress> brokerHashes = new TreeMap<>();
     private static SocketAddress channelBroker;//NOT USED
 
@@ -61,6 +56,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
             //RECEIVE BROKER HASHES
             brokerHashes = (TreeMap<Integer, SocketAddress>) objectInputStream.readObject();
+            System.out.println(brokerHashes);//IT IS PRINTED BEFORE THE MENU. CHECK IT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
             //SEND CHANNEL NAME
             objectOutputStream.writeObject(channel.getChannelName());
@@ -166,24 +162,24 @@ public class AppNodeImpl implements Publisher, Consumer{
     @Override
     public void notifyBrokersForHashTags(String hashtag, String action) {
         SocketAddress socketAddress = hashTopic(hashtag);
-        connect2(socketAddress);
+        connect(socketAddress);
         try {
-            objectOutputStream2.writeObject(7);
-            objectOutputStream2.flush();
+            objectOutputStream.writeObject(7);
+            objectOutputStream.flush();
 
-            objectOutputStream2.writeObject(hashtag);
-            objectOutputStream2.flush();
+            objectOutputStream.writeObject(hashtag);
+            objectOutputStream.flush();
 
-            objectOutputStream2.writeObject(action);
-            objectOutputStream2.flush();
+            objectOutputStream.writeObject(action);
+            objectOutputStream.flush();
 
             SocketAddress temp = new InetSocketAddress(InetAddress.getByName("localhost"), RequestHandler.port);
-            objectOutputStream2.writeObject(temp);
-            objectOutputStream2.flush();
+            objectOutputStream.writeObject(temp);
+            objectOutputStream.flush();
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            disconnect2();
+            disconnect();
         }
     }
 
@@ -211,28 +207,15 @@ public class AppNodeImpl implements Publisher, Consumer{
         return brokers;
     }
 
-    private void connect2(SocketAddress socketAddress) {
+    private void connect(SocketAddress socketAddress) {
         try {
-            requestSocket2 = new Socket();
-            requestSocket2.connect(socketAddress);
-            objectOutputStream2 = new ObjectOutputStream(requestSocket2.getOutputStream());
-            objectInputStream2 = new ObjectInputStream(requestSocket2.getInputStream());
+            requestSocket = new Socket();
+            requestSocket.connect(socketAddress);
+            objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
+            objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    public void disconnect2() {
-        try {
-            objectInputStream2.close();
-            objectOutputStream2.close();
-            requestSocket2.close();
-        } catch (IOException | NullPointerException e) {
-            e.printStackTrace();
-        }
-//        finally {
-//            System.out.println("Socket disconnected!");
-//        }
     }
 
     @Override
@@ -252,18 +235,12 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     public void disconnect() {
         try {
-            objectOutputStream.writeObject(-1);
-            objectOutputStream.flush();
-
             objectInputStream.close();
             objectOutputStream.close();
             requestSocket.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
-//        finally {
-//            System.out.println("Socket disconnected!");
-//        }
     }
 
     @Override
@@ -306,7 +283,7 @@ public class AppNodeImpl implements Publisher, Consumer{
         public void run() {
 
             try {
-                serverSocket = new ServerSocket(port);
+                serverSocket = new ServerSocket(port, 60, InetAddress.getByName("localhost"));
 
                 while(true) {
                     connectionSocket = serverSocket.accept();
@@ -409,7 +386,6 @@ public class AppNodeImpl implements Publisher, Consumer{
 
             } else if (choice.equals("2")) {
 
-
                 //Give hashtag
                 System.out.print("Please give the hashtag or the channel that you want to search for: ");
                 String channel_or_hashtag = in.nextLine();
@@ -418,25 +394,25 @@ public class AppNodeImpl implements Publisher, Consumer{
                 SocketAddress socketAddress = hashTopic(channel_or_hashtag);
 
                 //Connect to that broker
-                connect2(socketAddress);
+                connect(socketAddress);
 
                 HashMap<ChannelKey, String> videoList = null;
 
                 try {
                     //Write option
-                    objectOutputStream2.writeObject(2);
-                    objectOutputStream2.flush();
+                    objectOutputStream.writeObject(2);
+                    objectOutputStream.flush();
 
                     //Write channel name or hashtag
-                    objectOutputStream2.writeObject(channel_or_hashtag);
-                    objectOutputStream2.flush();
+                    objectOutputStream.writeObject(channel_or_hashtag);
+                    objectOutputStream.flush();
 
                     //Read videoList
-                    videoList = (HashMap<ChannelKey, String>) objectInputStream2.readObject();
+                    videoList = (HashMap<ChannelKey, String>) objectInputStream.readObject();
                 } catch (IOException | ClassNotFoundException e) {
                     e.printStackTrace();
                 } finally {
-                    disconnect2();
+                    disconnect();
                 }
 
                 //CHOOSE SOME VIDEO OR GO BACK
@@ -459,18 +435,18 @@ public class AppNodeImpl implements Publisher, Consumer{
 
                             //CONNECTING TO BROKER RESPONSIBLE FOR CHANNEL, THAT HAS THE VIDEO WE ASKED FOR
                             SocketAddress brokerAddress = hashTopic(channelName);
-                            connect2(brokerAddress);
+                            connect(brokerAddress);
 
-                            objectOutputStream2.writeObject(3);
-                            objectOutputStream2.flush();
+                            objectOutputStream.writeObject(3);
+                            objectOutputStream.flush();
 
-                            objectOutputStream2.writeObject(key);
-                            objectOutputStream2.flush();
+                            objectOutputStream.writeObject(key);
+                            objectOutputStream.flush();
 
                             //RECEIVE VIDEO FILE CHUNKS
                             byte[] chunk;
                             ArrayList<byte[]> chunks = new ArrayList<byte[]>();
-                            int size = (int) objectInputStream2.readObject();
+                            int size = (int) objectInputStream.readObject();
 
                             if (size == 0) {
                                 System.out.println("CHANNEL HAS NO VIDEO WITH THIS ID...");
@@ -479,7 +455,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                             else {
                                 for (int i = 0; i < size; i++) {
                                     chunk = new byte[4096];
-                                    chunk = objectInputStream2.readAllBytes();
+                                    chunk = objectInputStream.readAllBytes();
                                     chunks.add(chunk);
                                 }
                                 try {
@@ -503,7 +479,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                         } catch (IOException | ClassNotFoundException e) {
                             e.printStackTrace();
                         } finally {
-                            disconnect2();
+                            disconnect();
                         }
                     }
                     else
