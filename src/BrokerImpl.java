@@ -264,16 +264,14 @@ public class BrokerImpl implements Broker{
                             brokerHashtags.put(hashtag, value);
                         } else {
                             ArrayList<SocketAddress> value = brokerHashtags.get(hashtag);
-                            value.add(socketAddress);//??
+                            value.add(socketAddress);
                             brokerHashtags.put(hashtag, value);
                         }
                     } else if (action.equals("REMOVE")) {
                         if (brokerHashtags.get(hashtag).size() > 1) {
-                            if (brokerHashtags.get(hashtag).contains(socketAddress)) {
-                                ArrayList<SocketAddress> value = brokerHashtags.get(hashtag);
-                                value.remove(socketAddress);//??
-                                brokerHashtags.put(hashtag, value);
-                            }
+                            ArrayList<SocketAddress> value = brokerHashtags.get(hashtag);
+                            value.remove(socketAddress);
+                            brokerHashtags.put(hashtag, value);
                         } else {
                             brokerHashtags.remove(hashtag);
                         }
