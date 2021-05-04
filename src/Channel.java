@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 public class Channel {
 
@@ -8,8 +9,7 @@ public class Channel {
     private HashMap<String, ArrayList<VideoFile>> hashtagVideoFilesMap;
     private int counterVideoID;
     private HashMap<Integer, VideoFile> ID_VideoFileMap;
-    private HashMap<Integer, String> ID_VideoNameMap;//OR ID_MetadataMap?
-
+    private HashMap<ChannelKey, String> ID_VideoNameMap;
 
     /** Constructors */
 
@@ -27,7 +27,7 @@ public class Channel {
     //To create existing channels
     public Channel (String channelName, ArrayList<String> hashtagsPublished, HashMap<String, ArrayList<VideoFile>>
             hashtagVideoFilesMap, int counterVideoID, HashMap<Integer, VideoFile> ID_VideoFileMap,
-                    HashMap<Integer, String> ID_VideoNameMap) {
+                    HashMap<ChannelKey, String> ID_VideoNameMap) {
         this.channelName = channelName;
         this.hashtagsPublished = hashtagsPublished;
         this.hashtagVideoFilesMap = hashtagVideoFilesMap;
@@ -37,12 +37,13 @@ public class Channel {
 
     }
 
-    public void addVideoFile(VideoFile video, AppNodeImpl appNode) {
+    public HashMap<String, String> addVideoFile(VideoFile video) {
         video.setVideoID(counterVideoID);
         ID_VideoFileMap.put(counterVideoID, video);
-        ID_VideoNameMap.put(counterVideoID, video.getVideoName());
+        ID_VideoNameMap.put(new ChannelKey(this.channelName, counterVideoID), video.getVideoName());
         counterVideoID++;
 
+        HashMap<String, String> hashtagsNeedNotification = new HashMap<>();
         ArrayList<String> hashtags = video.getAssociatedHashtags();
         for (String hashtag : hashtags) {
             if (hashtagsPublished.contains(hashtag)) {
@@ -55,31 +56,37 @@ public class Channel {
                 hashtagVideoFilesMap.put(hashtag, value);
 
                 hashtagsPublished.add(hashtag);
-                appNode.notifyBrokersForHashTags(hashtag, "ADD");
+
+                hashtagsNeedNotification.put(hashtag, "ADD");
             }
         }
+        return hashtagsNeedNotification;
     }
 
-    public void removeVideoFile(VideoFile video, AppNodeImpl appNode) {
+    public HashMap<String, String> removeVideoFile(VideoFile video) {
         ID_VideoFileMap.remove(video.getVideoID());
-        ID_VideoNameMap.remove(video.getVideoID());
+        ID_VideoNameMap.remove(new ChannelKey(this.channelName, video.getVideoID()));
 
+        HashMap<String, String> hashtagsNeedNotification = new HashMap<>();
         ArrayList<String> hashtags = video.getAssociatedHashtags();
         for (String hashtag : hashtags) {
             if (hashtagVideoFilesMap.get(hashtag).size() == 1) {
                 hashtagVideoFilesMap.remove(hashtag);
 
                 hashtagsPublished.remove(hashtag);
-                appNode.notifyBrokersForHashTags(hashtag, "REMOVE");
+
+                hashtagsNeedNotification.put(hashtag, "REMOVE");
             } else {
                 ArrayList<VideoFile> value = hashtagVideoFilesMap.get(hashtag);
                 value.remove(video);
                 hashtagVideoFilesMap.put(hashtag, value);
             }
         }
+        return hashtagsNeedNotification;
     }
 
-    public void updateVideoFile(VideoFile video, ArrayList<String> hashtags, String method, AppNodeImpl appNode) {
+    public HashMap<String, String> updateVideoFile(VideoFile video, ArrayList<String> hashtags, String method) {
+        HashMap<String, String> hashtagsNeedNotification = new HashMap<>();
         if (method.equals("ADD")) {
             for (String hashtag : hashtags) {
                 video.addHashtag(hashtag);
@@ -97,7 +104,7 @@ public class Channel {
                     // Add hashtag to the channel's Published Hashtags.
                     hashtagsPublished.add(hashtag);
                     // Brokers notification needed about new hashtag in channel.
-                    appNode.notifyBrokersForHashTags(hashtag, "ADD");
+                    hashtagsNeedNotification.put(hashtag, "ADD");
                 }
             }
         } else if (method.equals("REMOVE")) {
@@ -115,22 +122,19 @@ public class Channel {
                     // Remove hashtag from the channel's Published Hashtags.
                     hashtagsPublished.remove(hashtag);
                     // Brokers notification needed about new hashtag in channel.
-                    appNode.notifyBrokersForHashTags(hashtag, "REMOVE");
+                    hashtagsNeedNotification.put(hashtag, "REMOVE");
                 }
             }
         } else {
             System.out.println("MAJOR ERROR");
         }
+        return hashtagsNeedNotification;
     }
 
     /** Getters */
 
     public ArrayList<String> getHashtagsPublished() {
         return hashtagsPublished;
-    }
-
-    public HashMap<Integer, VideoFile> getID_VideoFileMap() {
-        return ID_VideoFileMap;
     }
 
     public ArrayList<VideoFile> getVideoFiles_byHashtag(String hashtag) {
@@ -141,8 +145,35 @@ public class Channel {
         return ID_VideoFileMap.get(ID);
     }
 
-    public HashMap<Integer, String> getChannelVideoNames() {
+    public HashMap<Integer, VideoFile> getID_VideoFileMap() {
+        return ID_VideoFileMap;
+    }
+
+
+    public HashMap<ChannelKey, String> getChannelVideoNames() {
         return ID_VideoNameMap;
+    }
+
+    public String getChannelName(){
+        return this.channelName;
+    }
+
+    public HashMap<ChannelKey, String> getChannelVideoNamesByHashtag(String hashtag) {
+
+        //We store a hashmap with all videos that have specific hashtag.
+        //Key is the video id, Value is videoName (we might change it to metadata)
+        HashMap<ChannelKey, String> hashtagVideosHashmap = new HashMap<>();
+
+        //Get all files with specific hashtag
+        ArrayList<VideoFile> hashtag_files = hashtagVideoFilesMap.get(hashtag);
+
+        //Get hashmap needed
+        for (VideoFile video : hashtag_files) {
+            hashtagVideosHashmap.put(new ChannelKey(channelName, video.getVideoID()), video.getVideoName());
+        }
+
+        return hashtagVideosHashmap;
+
     }
 
     /** Setters */
@@ -157,8 +188,9 @@ public class Channel {
     public String toString() {
         String channelString;
         channelString = "Printing Contents of channel " + channelName + "\r\n";
-        for (int id : ID_VideoNameMap.keySet()) {
-            channelString += String.valueOf(id) + ": " + ID_VideoFileMap.get(id).getVideoName() + "\r\n";
+        for (Map.Entry<ChannelKey, String> key : ID_VideoNameMap.entrySet()) {
+            int id = key.getKey().getVideoID();
+            channelString += String.valueOf(id) + ": " + getVideoFile_byID(id).getVideoName() + "\r\n";
         }
         return channelString;
     }
