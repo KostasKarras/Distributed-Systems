@@ -459,7 +459,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                                     chunks.add(chunk);
                                 }
                                 try {
-                                    File nf = new File("C:/Users/Kostas/Desktop/test.mp4");
+                                    File nf = new File("C:/Users/mixgeo/Downloads/test.mp4");
                                     for (byte[] ar : chunks) {
                                         FileOutputStream fw = new FileOutputStream(nf, true);
                                         try {
