@@ -183,6 +183,58 @@ public class AppNodeImpl implements Publisher, Consumer{
         }
     }
 
+    public void notifyBrokersForChanges(ChannelKey channelKey, ArrayList<String> hashtags, String title, boolean action) {
+
+        if (!hashtags.isEmpty()) {
+            for (String hashtag : hashtags) {
+                SocketAddress socketAddress = hashTopic(hashtag);
+                connect(socketAddress);
+                try {
+                    objectOutputStream.writeObject(8);
+                    objectOutputStream.flush();
+
+                    objectOutputStream.writeObject("hashtag");
+                    objectOutputStream.flush();
+
+                    objectOutputStream.writeObject(hashtag);
+                    objectOutputStream.flush();
+
+                    objectOutputStream.writeObject(channelKey);
+                    objectOutputStream.flush();
+
+                    objectOutputStream.writeObject(title);
+                        objectOutputStream.flush();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    disconnect();
+                }
+            }
+        }
+
+        if (action) {
+            SocketAddress socketAddress = hashTopic(channelKey.getChannelName());
+            connect(socketAddress);
+            try {
+                objectOutputStream.writeObject(8);
+                objectOutputStream.flush();
+
+                objectOutputStream.writeObject("channel");
+                objectOutputStream.flush();
+
+                objectOutputStream.writeObject(channelKey);
+                objectOutputStream.flush();
+
+                objectOutputStream.writeObject(title);
+                objectOutputStream.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                disconnect();
+            }
+        }
+    }
+
     @Override
     public ArrayList<byte[]> generateChunks(VideoFile video) {
         ArrayList<byte[]> my_arraylist = new ArrayList<byte []>();
@@ -202,9 +254,17 @@ public class AppNodeImpl implements Publisher, Consumer{
         return my_arraylist;
     }
 
-    @Override
-    public List<Broker> getBrokers() {
-        return brokers;
+    public TreeMap<Integer, SocketAddress> getBrokerMap() {
+        /**DIMITRIS*/
+        connect();
+        try {
+            objectOutputStream.writeObject(0);
+            brokerHashes = (TreeMap<Integer, SocketAddress>) objectInputStream.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        } finally {
+            return brokerHashes;
+        }
     }
 
     private void connect(SocketAddress socketAddress) {
@@ -349,6 +409,9 @@ public class AppNodeImpl implements Publisher, Consumer{
                         objectOutputStream.writeObject(false);
                         objectOutputStream.flush();
                     }
+                } else if (option == 3) {
+                    String notificationMessage = (String) objectInputStream.readObject();
+                    System.out.println(notificationMessage);
                 }
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
@@ -383,6 +446,24 @@ public class AppNodeImpl implements Publisher, Consumer{
             System.out.println("0. Exit");
             choice = in.nextLine();
             if (choice.equals("1")) {
+                /**DIMITRIS*/
+                String topic;
+                System.out.print("Please select a topic (hashtag/channel) that you want to subscribe: ");
+                topic = in.nextLine();
+
+                SocketAddress socketAddress = hashTopic(topic);
+                connect(socketAddress);
+
+                try {
+                    objectOutputStream.writeObject(1);
+                    objectOutputStream.flush();
+                    objectOutputStream.writeObject(topic);
+                    objectOutputStream.flush();
+                    String response = (String) objectInputStream.readObject();
+                    System.out.println(response);
+                } catch (IOException | ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
 
             } else if (choice.equals("2")) {
 
@@ -530,6 +611,10 @@ public class AppNodeImpl implements Publisher, Consumer{
                     for (Map.Entry<String, String> item : notificationHashtags.entrySet())
                         notifyBrokersForHashTags(item.getKey(), item.getValue());
                 }
+
+                ChannelKey channelKey = new ChannelKey(channel.getChannelName(), video.getVideoID());
+                notifyBrokersForChanges(channelKey, hashtags, video.getVideoName(), false);
+
             } else if (choice.equals("5")) {
 
                 int videoID;
@@ -608,6 +693,9 @@ public class AppNodeImpl implements Publisher, Consumer{
                     for (Map.Entry<String, String> item : notificationHashtags.entrySet())
                         notifyBrokersForHashTags(item.getKey(), item.getValue());
                 }
+
+                ChannelKey channelKey = new ChannelKey(channel.getChannelName(), video.getVideoID());
+                notifyBrokersForChanges(channelKey, associatedHashtags, videoTitle, true);
 
             } else if (choice.equals("7")){
 

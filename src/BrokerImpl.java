@@ -9,6 +9,7 @@ import java.net.MulticastSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.nio.channels.Channel;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -34,6 +35,9 @@ public class BrokerImpl implements Broker{
     private static HashMap<String, ArrayList<SocketAddress>> brokerHashtags;
     private static TreeMap<Integer, SocketAddress> brokerHashes;
     private static HashMap<String, SocketAddress> brokerChannelNames;
+
+    private static HashMap<String, ArrayList<SocketAddress>> hashtagSubscriptions;
+    private static HashMap<String, ArrayList<SocketAddress>> channelSubscriptions;
 
     private static InetAddress userMulticastIP;
 
@@ -135,8 +139,8 @@ public class BrokerImpl implements Broker{
 
 
     @Override
-    public List<Broker> getBrokers() {
-        return brokers;
+    public TreeMap<Integer, SocketAddress> getBrokerMap() {
+        return brokerHashes;
     }
 
     public void connect() {
@@ -182,11 +186,58 @@ public class BrokerImpl implements Broker{
                 // If-else statements and calling of specific acceptConnection.
                 /** Node Requests Handle */
                 if (option == 0) {  // Get Brokers
-
+                    objectOutputStream.writeObject(brokerHashes);
                 }
 
                 /** Consumer - User Requests Handle */
                 else if (option == 1) {  // Register User
+                    /**DIMITRIS*/
+                    String topic = (String) objectInputStream.readObject();
+                    String responseSuccess = "Subscribed to " + topic + "successfully.";
+                    String responseFailure = "Attempt to subscribe has failed. Unable to find channel " + topic + ".";
+
+                    /**MAYBE CHANGE THE WAY WE CREATE AN ADDRESS*/
+                    InetAddress ip_address = ((InetSocketAddress) socket.getRemoteSocketAddress()).getAddress();
+                    SocketAddress user_hear_address = new InetSocketAddress(ip_address, 4900);
+
+                    if (topic.charAt(0) == '#') {
+                        if (hashtagSubscriptions.containsKey(topic)) {
+                            ArrayList<SocketAddress> value = hashtagSubscriptions.get(topic);
+                            value.add(user_hear_address); //proper address
+                            hashtagSubscriptions.put(topic, value);
+                        } else {
+                            ArrayList<SocketAddress> value = new ArrayList<>();
+                            value.add(user_hear_address); //proper address
+                            hashtagSubscriptions.put(topic, value);
+                        }
+                        //GIVE SUCCESS MESSAGE
+                        objectOutputStream.writeObject(responseSuccess);
+                        objectOutputStream.flush();
+                    } else {
+                        if (channelSubscriptions.containsKey(topic)) {
+                            ArrayList<SocketAddress> value = channelSubscriptions.get(topic);
+                            value.add(user_hear_address); //proper address
+                            channelSubscriptions.put(topic, value);
+
+                            //GIVE SUCCESS MESSAGE
+                            objectOutputStream.writeObject(responseSuccess);
+                            objectOutputStream.flush();
+                        } else {
+                            if (brokerChannelNames.containsKey(topic)) {
+                                ArrayList<SocketAddress> value = new ArrayList<>();
+                                value.add(user_hear_address); //proper address
+                                channelSubscriptions.put(topic, value);
+
+                                //GIVE SUCCESS MESSAGE
+                                objectOutputStream.writeObject(responseSuccess);
+                                objectOutputStream.flush();
+                            } else {
+                                //GIVE FAILURE MESSAGE
+                                objectOutputStream.writeObject(responseFailure);
+                                objectOutputStream.flush();
+                            }
+                        }
+                    }
 
                 } else if (option == 2) {  // Get Topic Video List
 
@@ -244,6 +295,7 @@ public class BrokerImpl implements Broker{
                     String channel_name = (String) objectInputStream.readObject();
                     SocketAddress socketAddress = (SocketAddress) objectInputStream.readObject();
                     brokerChannelNames.put(channel_name, socketAddress);
+                    /** NOT RIGTH */
 
                     /** Publisher Requests Handle */
 
@@ -276,6 +328,26 @@ public class BrokerImpl implements Broker{
                             brokerHashtags.remove(hashtag);
                         }
                     }
+                } else if (option == 8) { //Notify Brokers for changes
+                    String action = (String) objectInputStream.readObject();
+                    if (action == "hashtag") {
+                        String hashtag = (String) objectInputStream.readObject();
+                        ChannelKey channelKey = (ChannelKey) objectInputStream.readObject();
+                        String title = (String) objectInputStream.readObject();
+
+                        for (SocketAddress socketAddress : hashtagSubscriptions.get(hashtag)) {
+                            new Notifier(socketAddress, channelKey, title, hashtag).start();
+                        }
+
+                    } else if (action == "channel") {
+                        ChannelKey channelKey = (ChannelKey) objectInputStream.readObject();
+                        String title = (String) objectInputStream.readObject();
+
+                        for (SocketAddress socketAddress : channelSubscriptions.get(channelKey.getChannelName())) {
+                            new Notifier(socketAddress, channelKey, title, null).start();
+                        }
+                    }
+
                 }
                 try {
                     objectInputStream.close();
@@ -287,6 +359,59 @@ public class BrokerImpl implements Broker{
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    /**NEW HANDLER TO SEND NOTIFICATION FOR NEW VIDEOS TO SUBSCRIBED USERS*/
+    class Notifier extends Thread {
+
+        ChannelKey channelKey;
+        String title;
+        String hashtag;
+        ObjectInputStream objectInputStream;
+        ObjectOutputStream objectOutputStream;
+
+        /** Construct a Handler */
+        Notifier(SocketAddress socketAddress, ChannelKey channelKey, String title, String hashtag) {
+            this.channelKey = channelKey;
+            this.title = title;
+            this.hashtag=hashtag;
+
+            Socket connectionSocket = new Socket();
+            try {
+                connectionSocket.connect(socketAddress);
+                objectOutputStream = new ObjectOutputStream(connectionSocket.getOutputStream());
+                objectInputStream = new ObjectInputStream(connectionSocket.getInputStream());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        public void run() {
+
+            String notificationMessage;
+
+            if (hashtag == null) {
+                notificationMessage = "The channel " + channelKey.getChannelName() +
+                        " that you are subscribed to has uploaded a new video with title "  + title +
+                        " and videoID " + channelKey.getVideoID() + ".";
+            } else {
+                notificationMessage = "There is a new video in topic " + hashtag +
+                        " that you are subscribed, from the channel " + channelKey.getChannelName() + " and title " +
+                        title + " with videoID " + channelKey.getVideoID() + ".";
+            }
+
+            try {
+                objectOutputStream.writeObject(3);
+                objectOutputStream.flush();
+
+                objectOutputStream.writeObject(notificationMessage);
+                objectOutputStream.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            disconnect();
         }
     }
 
