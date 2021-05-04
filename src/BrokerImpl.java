@@ -69,6 +69,7 @@ public class BrokerImpl implements Broker{
             brokerHashes.put(brokerHash, serverSocket.getLocalSocketAddress());
             //notify other brokers for this ^^^^^
 
+
             while(true) {
                 connectionSocket = serverSocket.accept();
                 new Handler(connectionSocket, current_threads).start();

@@ -1,3 +1,7 @@
+//ADD \n BEFORE PRINT LINES IN EVERY SYSTEM.OUT.PRINTLN
+//CHANGED UPLOAD AND DELETE
+//
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -11,6 +15,10 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -416,6 +424,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                 }
 
                 //CHOOSE SOME VIDEO OR GO BACK
+                File nf = null;
                 boolean wantVideo = true;
                 Scanner in2 = new Scanner(System.in);
                 while (wantVideo) {
@@ -459,7 +468,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                                     chunks.add(chunk);
                                 }
                                 try {
-                                    File nf = new File("C:/Users/mixgeo/Downloads/test.mp4");
+                                    nf = new File("Fetched Videos\\" + channelName + videoID + ".mp4");
                                     for (byte[] ar : chunks) {
                                         FileOutputStream fw = new FileOutputStream(nf, true);
                                         try {
@@ -468,18 +477,19 @@ public class AppNodeImpl implements Publisher, Consumer{
                                             fw.close();
                                         }
                                     }
+                                    //Open vlc and play video from java!!!
+                                    ProcessBuilder pb = new ProcessBuilder("C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe",
+                                            "C:\\Users\\Kostas\\Desktop\\test.mp4");
+                                    Process start = pb.start();
                                 } catch (IOException e) {
                                     e.printStackTrace();
+                                } finally {
+                                    Files.deleteIfExists(nf.toPath());
+                                    disconnect();
                                 }
-                                //Open vlc and play video from java!!!
-                                ProcessBuilder pb = new ProcessBuilder("C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe",
-                                        "C:\\Users\\Kostas\\Desktop\\test.mp4");
-                                Process start = pb.start();
                             }
                         } catch (IOException | ClassNotFoundException e) {
                             e.printStackTrace();
-                        } finally {
-                            disconnect();
                         }
                     }
                     else
@@ -604,6 +614,19 @@ public class AppNodeImpl implements Publisher, Consumer{
                 VideoFile video = new VideoFile(filepath, associatedHashtags, videoTitle);
 
                 HashMap<String, String> notificationHashtags = channel.addVideoFile(video);
+
+                //MICHAEL
+                //CREATED A FOLDER TO STORE UPLOADED VIDEOS
+                try {
+                    Path source = Paths.get(filepath);
+                    Path target = Paths.get("Uploaded Videos\\" + videoTitle + ".mp4");
+                    Files.copy(source, target);
+                } catch (IOException e) {
+                    channel.removeVideoFile(video);
+                    e.printStackTrace();
+                }
+                //
+
                 if (!notificationHashtags.isEmpty()) {
                     for (Map.Entry<String, String> item : notificationHashtags.entrySet())
                         notifyBrokersForHashTags(item.getKey(), item.getValue());
@@ -626,10 +649,23 @@ public class AppNodeImpl implements Publisher, Consumer{
                 VideoFile video = channel.getVideoFile_byID(videoID);
 
                 HashMap<String, String> notificationHashtags = channel.removeVideoFile(video);
+
+                //MICHAEL
+                //DELETE VIDEO FROM UPLOADED VIDEOS
+                try {
+                    Path file = Paths.get("Uploaded Videos\\" + video.getVideoName() + ".mp4");
+                    Files.delete(file);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                //
+
                 if (!notificationHashtags.isEmpty()) {
                     for (Map.Entry<String, String> item : notificationHashtags.entrySet())
                         notifyBrokersForHashTags(item.getKey(), item.getValue());
                 }
+
+
             } else if (choice.equals("0")) {
                 end = 1;
             }
