@@ -1,3 +1,5 @@
+//OPTIONS 0 AND 4
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -35,8 +37,6 @@ public class BrokerImpl implements Broker{
     private static TreeMap<Integer, SocketAddress> brokerHashes;
     private static HashMap<String, SocketAddress> brokerChannelNames;
 
-    private static InetAddress userMulticastIP;
-
     public static void main(String[] args) {
 
         new BrokerImpl().initialize(4321);
@@ -56,8 +56,6 @@ public class BrokerImpl implements Broker{
 
         try {
             serverSocket = new ServerSocket(port, 60, InetAddress.getByName("localhost"));
-
-            userMulticastIP = InetAddress.getByName("228.5.6.8");
 
             //HANDLE MULTICAST
             new Multicast_Handler().start();
@@ -181,9 +179,12 @@ public class BrokerImpl implements Broker{
             try {
                 int option = (int) objectInputStream.readObject();
                 // If-else statements and calling of specific acceptConnection.
-                /** Node Requests Handle */
-                if (option == 0) {  // Get Brokers
 
+                /** Node Requests Handle */
+                if (option == 0) {  // Get Broker Hashes
+
+                    objectOutputStream.writeObject(brokerHashes);
+                    objectOutputStream.flush();
                 }
 
                 /** Consumer - User Requests Handle */
@@ -237,11 +238,8 @@ public class BrokerImpl implements Broker{
                         objectOutputStream.flush();
                     }
                 } else if (option == 4) { //FIRST CONNECTION
-                    //SEND BROKER HASHES
-                    objectOutputStream.writeObject(brokerHashes);
-                    objectOutputStream.flush();
 
-                    //RECEIVE CHANNEL NAME
+                    //RECEIVE CHANNEL NAME AND SOCKET ADDRESS FOR CONNECTIONS
                     String channel_name = (String) objectInputStream.readObject();
                     SocketAddress socketAddress = (SocketAddress) objectInputStream.readObject();
                     brokerChannelNames.put(channel_name, socketAddress);
@@ -303,7 +301,7 @@ public class BrokerImpl implements Broker{
 
                 //INITIALIZE MULTICAST SOCKET
                 int multicastPort = 5000;
-                InetAddress brokerIP = InetAddress.getByName("192.168.1.203");
+                InetAddress brokerIP = InetAddress.getByName("192.168.1.204");
                 SocketAddress multicastSocketAddress = new InetSocketAddress(brokerIP, multicastPort);
                 multicastSocket = new MulticastSocket(multicastSocketAddress);
 

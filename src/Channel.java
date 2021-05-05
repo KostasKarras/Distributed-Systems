@@ -1,3 +1,5 @@
+//TO STRING
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -187,7 +189,7 @@ public class Channel {
 
     public String toString() {
         String channelString;
-        channelString = "Printing Contents of channel " + channelName + "\r\n";
+        channelString = "Contents of channel " + channelName + "\r\n";
         for (Map.Entry<ChannelKey, String> key : ID_VideoNameMap.entrySet()) {
             int id = key.getKey().getVideoID();
             channelString += String.valueOf(id) + ": " + getVideoFile_byID(id).getVideoName() + "\r\n";

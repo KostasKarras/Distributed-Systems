@@ -1,6 +1,8 @@
 //ADD \n BEFORE PRINT LINES IN EVERY SYSTEM.OUT.PRINTLN
 //CHANGED UPLOAD AND DELETE
-//
+//INITIALIZATION
+//CHECK PROFILE OPTION 8
+//INPUT CHANNEL NAME AND CHECK IF IT IS UNIQUE
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -15,10 +17,7 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -49,22 +48,28 @@ public class AppNodeImpl implements Publisher, Consumer{
     public void initialize(int port) {
 
         //CHANNEL NAME
-        channel = new Channel("USER");
+        Scanner input = new Scanner(System.in);
+        System.out.println(" Welcome. What is your channel name : ");
+        String name = input.nextLine();
+        channel = new Channel(name);
 
         //FIRST CONNECTION
-        connect();
-
         try {
 
-            //THAT IS NOT CORRECT YET
+            //CONNECT TO RANDOM BROKER TO RECEIVE BROKER HASHES
+            connect();
+            objectOutputStream.writeObject(0);
+            objectOutputStream.flush();
+            brokerHashes = (TreeMap<Integer, SocketAddress>) objectInputStream.readObject();
+            disconnect();
+
+            //CONNECT TO APPROPRIATE BROKER
+            channelBroker = hashTopic(channel.getChannelName());
+            connect(channelBroker);
 
             //SEND OPTION 4 FOR INITIALIZATION
             objectOutputStream.writeObject(4);
             objectOutputStream.flush();
-
-            //RECEIVE BROKER HASHES
-            brokerHashes = (TreeMap<Integer, SocketAddress>) objectInputStream.readObject();
-            System.out.println(brokerHashes);//IT IS PRINTED BEFORE THE MENU. CHECK IT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
             //SEND CHANNEL NAME
             objectOutputStream.writeObject(channel.getChannelName());
@@ -388,6 +393,7 @@ public class AppNodeImpl implements Publisher, Consumer{
             System.out.println("5. Remove Hashtags from a Video");
             System.out.println("6. Upload Video");
             System.out.println("7. Delete Video");
+            System.out.println("8. Check Profile");
             System.out.println("0. Exit");
             choice = in.nextLine();
             if (choice.equals("1")) {
@@ -428,7 +434,13 @@ public class AppNodeImpl implements Publisher, Consumer{
                 boolean wantVideo = true;
                 Scanner in2 = new Scanner(System.in);
                 while (wantVideo) {
-                    System.out.println(videoList);
+                    //System.out.println(videoList);
+                    //MICHAEL
+                    for (Map.Entry<ChannelKey, String> item : videoList.entrySet()) {
+                        System.out.println("Channel Name : " + item.getKey().getChannelName() + "     Video ID : "
+                                + item.getKey().getVideoID() + "    Video Name : " +item.getValue());
+                    }
+                    //
                     System.out.print("Do you want to see a video from these? (y/n)");
                     String answer = in.nextLine();
 
@@ -454,7 +466,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
                             //RECEIVE VIDEO FILE CHUNKS
                             byte[] chunk;
-                            ArrayList<byte[]> chunks = new ArrayList<byte[]>();
+                            ArrayList<byte[]> chunks = new ArrayList<>();
                             int size = (int) objectInputStream.readObject();
 
                             if (size == 0) {
@@ -477,14 +489,18 @@ public class AppNodeImpl implements Publisher, Consumer{
                                             fw.close();
                                         }
                                     }
+
                                     //Open vlc and play video from java!!!
                                     ProcessBuilder pb = new ProcessBuilder("C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe",
                                             "C:\\Users\\Kostas\\Desktop\\test.mp4");
                                     Process start = pb.start();
+
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 } finally {
-                                    Files.deleteIfExists(nf.toPath());
+                                    try {
+                                        Files.deleteIfExists(nf.toPath());
+                                    } catch(NullPointerException ignored) {}
                                     disconnect();
                                 }
                             }
@@ -622,8 +638,10 @@ public class AppNodeImpl implements Publisher, Consumer{
                     Path target = Paths.get("Uploaded Videos\\" + videoTitle + ".mp4");
                     Files.copy(source, target);
                 } catch (IOException e) {
+                    if (e instanceof FileAlreadyExistsException) {
+                        System.out.println("There is already a video with that name. Upload cancelled...\n");
+                    }
                     channel.removeVideoFile(video);
-                    e.printStackTrace();
                 }
                 //
 
@@ -632,7 +650,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                         notifyBrokersForHashTags(item.getKey(), item.getValue());
                 }
 
-            } else if (choice.equals("7")){
+            } else if (choice.equals("7")) {
 
                 int videoID;
 
@@ -665,8 +683,9 @@ public class AppNodeImpl implements Publisher, Consumer{
                         notifyBrokersForHashTags(item.getKey(), item.getValue());
                 }
 
-
-            } else if (choice.equals("0")) {
+            }else if (choice.equals("8")) { //CHECK PROFILE
+                System.out.println(channel);
+            }else if (choice.equals("0")) {
                 end = 1;
             }
         } while (end == 0);
