@@ -488,6 +488,12 @@ public class AppNodeImpl implements Publisher, Consumer{
                     objectOutputStream.writeObject(channel_or_hashtag);
                     objectOutputStream.flush();
 
+                    /**CHANGE*/
+                    //Write this user's channel name
+                    objectOutputStream.writeObject(channel.getChannelName());
+                    objectOutputStream.flush();
+                    /**END CHANGE*/
+
                     //Read videoList
                     videoList = (HashMap<ChannelKey, String>) objectInputStream.readObject();
                 } catch (IOException | ClassNotFoundException e) {

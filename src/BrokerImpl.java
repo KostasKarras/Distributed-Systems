@@ -133,8 +133,13 @@ public class BrokerImpl implements Broker{
     }
 
     @Override
-    public void filterConsumers() {
-
+    public HashMap<ChannelKey, String> filterConsumers(HashMap<ChannelKey, String> videoList, String channelName) {
+        for (ChannelKey channelKey : videoList.keySet()) {
+            if (channelKey.getChannelName() == channelName) {
+                videoList.remove(channelKey);
+            }
+        }
+        return videoList;
     }
 
 
@@ -244,6 +249,9 @@ public class BrokerImpl implements Broker{
                     PullOperation pull_operation = new PullOperation();
 
                     String channel_or_hashtag = (String) objectInputStream.readObject();
+                    /**CHANGE*/
+                    String channelName = (String) objectInputStream.readObject();
+                    /**END CHANGE*/
                     HashMap<ChannelKey, String> videoList = null;
 
                     if (channel_or_hashtag.charAt(0) == '#') {
@@ -255,6 +263,16 @@ public class BrokerImpl implements Broker{
                         if (publisherAddress != null)
                             videoList = pull_operation.pullChannel(publisherAddress);
                     }
+
+                    /**CHANGE FILTER*/
+                    for (ChannelKey channelKey : videoList.keySet()) {
+                        if (channelKey.getChannelName() == channelName) {
+                            videoList.remove(channelKey);
+                        }
+                    }
+                    //HashMap<ChannelKey, String> videoListUpdated = filterConsumers(videoList, channelName);
+                    /**END CHANGE*/
+
                     objectOutputStream.writeObject(videoList);
 
 
