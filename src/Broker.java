@@ -1,3 +1,5 @@
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.util.HashMap;
 import java.util.List;
 
@@ -17,5 +19,8 @@ interface Broker extends Node {
     public void notifyBrokersOnChanges();
 
     public HashMap<ChannelKey, String> filterConsumers(HashMap<ChannelKey, String> videoList, String channelName);
+
+    public void setBrokerHashes(ObjectInputStream objectInputStream) throws IOException,
+            ClassNotFoundException;
 
 }

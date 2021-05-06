@@ -8,12 +8,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.math.BigInteger;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketAddress;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.security.MessageDigest;
@@ -313,7 +308,7 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
     @Override
-    public void updateNodes() {
+    public void updateNodes() throws SocketException {
 
     }
 

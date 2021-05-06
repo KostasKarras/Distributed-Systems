@@ -1,4 +1,7 @@
+import java.io.IOException;
+import java.net.InetAddress;
 import java.net.SocketAddress;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +19,6 @@ interface Node {
 
     public void disconnect();
 
-    public void updateNodes();
+    public void updateNodes() throws IOException;
 
 }

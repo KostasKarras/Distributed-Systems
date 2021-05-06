@@ -1,16 +1,12 @@
 //OPTIONS 0 AND 4
 
+import jdk.swing.interop.SwingInterOpUtils;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.math.BigInteger;
-import java.net.DatagramPacket;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.MulticastSocket;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketAddress;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -19,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 
 public class BrokerImpl implements Broker{
 
@@ -32,6 +29,8 @@ public class BrokerImpl implements Broker{
     private static List<Publisher> registeredPublishers = null;
 
     private static ServerSocket serverSocket;
+    private static InetAddress multicastIP;
+    private static int multicastPort;
 
     private static HashMap<String, ArrayList<SocketAddress>> brokerHashtags;
     private static TreeMap<Integer, SocketAddress> brokerHashes;
@@ -39,6 +38,9 @@ public class BrokerImpl implements Broker{
 
     private static HashMap<String, ArrayList<SocketAddress>> hashtagSubscriptions;
     private static HashMap<String, ArrayList<SocketAddress>> channelSubscriptions;
+
+    //USAGE IN MULTICAST
+    private static boolean hashes_updated ;
 
     public static void main(String[] args) {
 
@@ -55,34 +57,41 @@ public class BrokerImpl implements Broker{
         hashtagSubscriptions = new HashMap<>();
         channelSubscriptions = new HashMap<>();
 
+        hashes_updated = false;
+
         //brokers.add(this);
 
         Socket connectionSocket = null;
 
         try {
             serverSocket = new ServerSocket(port, 60, InetAddress.getByName("localhost"));
+            System.out.println(serverSocket.getLocalSocketAddress());
 
-            //HANDLE MULTICAST
-            new Multicast_Handler().start();
-            //
+            multicastIP = InetAddress.getByName("228.5.6.10");
+            multicastPort = 5000;
 
+            //CALCULATE BROKERHASH
             String serverSocketAddress = serverSocket.getLocalSocketAddress().toString();
             ID = String.format("Broker_%s", serverSocketAddress);
             brokerHash = calculateKeys(ID);
-            brokerHashes.put(brokerHash, serverSocket.getLocalSocketAddress());
-            //notify other brokers for this ^^^^^
 
+            //GET LIST FOR BROKERHASHES FROM OTHER BROKERS
+            updateNodes();
+
+            //HANDLE MULTICAST
+            Multicast_Handler multicast_handler = new Multicast_Handler(multicastIP, multicastPort);
+            multicast_handler.start();
+            //
 
             while(true) {
                 connectionSocket = serverSocket.accept();
                 new Handler(connectionSocket, current_threads).start();
                 current_threads++;
             }
-        } catch(IOException e) {
+        } catch(IOException  e) {
             /* Crash the server if IO fails. Something bad has happened. */
             throw new RuntimeException("Could not create ServerSocket ", e);
-        }
-        finally {
+        } finally {
             try {
                 serverSocket.close();
             } catch (IOException ioException) {
@@ -157,7 +166,34 @@ public class BrokerImpl implements Broker{
     }
 
     @Override
-    public void updateNodes() {
+    public void updateNodes() throws IOException {
+
+        DatagramSocket socket = new DatagramSocket(4322, InetAddress.getLocalHost());
+
+        //TRANSFORM BROKERHASH AND SOCKET ADDRESS TO STRING, CONCATENATE THEM AND TRANSFORM TO BYTE ARRAY
+        String hash = Integer.toString(brokerHash);
+        String address = serverSocket.getLocalSocketAddress().toString();
+        String hash_address = hash + "," + address;
+        byte[] buffer = hash_address.getBytes();
+
+        //MAKE PACKET AND SEND IT
+        DatagramPacket packet = new DatagramPacket(buffer, buffer.length, multicastIP, multicastPort);
+        socket.send(packet);
+
+        //CLOSE SOCKET
+        socket.close();
+
+    }
+
+    @Override
+    public synchronized void setBrokerHashes(ObjectInputStream objectInputStream) throws IOException,
+            ClassNotFoundException {
+
+        if (!hashes_updated) {
+            System.out.println("IN SET BROKER HASHES TO UPDATE");
+            brokerHashes = (TreeMap<Integer, SocketAddress>) objectInputStream.readObject();
+            hashes_updated = true;
+        }
 
     }
 
@@ -191,7 +227,7 @@ public class BrokerImpl implements Broker{
                 // If-else statements and calling of specific acceptConnection.
 
                 /** Node Requests Handle */
-                if (option == 0) {  // Get Broker Hashes
+                if (option == 0) {  // Send Broker Hashes
 
                     objectOutputStream.writeObject(brokerHashes);
                     objectOutputStream.flush();
@@ -376,6 +412,11 @@ public class BrokerImpl implements Broker{
                         }
                     }
 
+                } else if (option == 10) { //RECEIVE BROKER HASHES IN FIRST CONNECTION
+
+                    setBrokerHashes(objectInputStream);
+                    System.out.println("IN OPTION 10");
+
                 }
                 try {
                     objectInputStream.close();
@@ -389,6 +430,8 @@ public class BrokerImpl implements Broker{
             }
         }
     }
+
+
 
     /**NEW HANDLER TO SEND NOTIFICATION FOR NEW VIDEOS TO SUBSCRIBED USERS*/
     class Notifier extends Thread {
@@ -446,22 +489,24 @@ public class BrokerImpl implements Broker{
     /** A Thread subclass to handle broker communication */
     class Multicast_Handler extends Thread {
 
-        public MulticastSocket multicastSocket;
-        public DatagramPacket packet_receiver;
+        private MulticastSocket multicastSocket;
+        private DatagramPacket packet_receiver;
+        private InetAddress groupAddress ;
+        private int multicastPort;
 
-        Multicast_Handler() {
+        Multicast_Handler(InetAddress multicastIP, int multicastPort) {
 
             try {
 
                 //INITIALIZE MULTICAST SOCKET
-                int multicastPort = 5000;
-                InetAddress brokerIP = InetAddress.getByName("192.168.1.204");
+                this.multicastPort = multicastPort;
+                InetAddress brokerIP = InetAddress.getLocalHost();
                 SocketAddress multicastSocketAddress = new InetSocketAddress(brokerIP, multicastPort);
                 multicastSocket = new MulticastSocket(multicastSocketAddress);
 
                 //JOIN GROUP ADDRESS
-                InetAddress group_address = InetAddress.getByName("228.5.6.10");
-                multicastSocket.joinGroup(group_address);
+                groupAddress = multicastIP;
+                multicastSocket.joinGroup(groupAddress);
 
                 //INITIALIZE DATAGRAM PACKET
                 byte buf[] = new byte[1000];
@@ -479,19 +524,53 @@ public class BrokerImpl implements Broker{
             try {
 
                 while (true) {
+
+                    //WAIT TO RECEIVE SOME PACKET
                     multicastSocket.receive(packet_receiver);
-                    String message = new String(packet_receiver.getData(), packet_receiver.getOffset(), packet_receiver.getLength());
-                    System.out.println(message);
 
-                    if (message.equals("break")) {
-                        break;
+                    //SPLIT BROKER HASH AND HASH ADDRESS
+                    String hash_address = new String(packet_receiver.getData(), packet_receiver.getOffset(),
+                                                     packet_receiver.getLength());
+                    String[] hash_address_array = hash_address.split(",");
+                    int brokerHash = Integer.parseInt(hash_address_array[0]);
+
+                    //SPLIT SOCKET ADDRESS TO IP AND PORT AND CREATE SOCKET ADDRESS OBJECT
+                    String[] address = hash_address_array[1].split(":");
+                    InetAddress brokerIP = InetAddress.getByName(address[0].substring(10));
+                    int brokerPort = Integer.parseInt(address[1]);
+                    SocketAddress socketAddress = new InetSocketAddress(brokerIP, brokerPort);
+
+                    //CHECK IF IT WAS RECEIVED FROM THIS BROKER ITSELF
+                    if (!socketAddress.equals(serverSocket.getLocalSocketAddress())) {
+
+                        //UPDATE BROKER HASHES
+                        brokerHashes.put(brokerHash, socketAddress);
+
+                        //SEND UPDATED BROKER HASHES TO NEW BROKER
+                        Socket socket = new Socket();
+                        socket.connect(socketAddress);
+                        ObjectOutputStream objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
+
+                        objectOutputStream.writeObject(10);
+                        objectOutputStream.flush();
+
+                        objectOutputStream.writeObject(brokerHashes);
+                        objectOutputStream.flush();
+
                     }
-
                 }
             }
             catch (IOException ioException) {
                 ioException.printStackTrace();
             }
+        }
+
+        public InetAddress getMulticastIP() {
+            return groupAddress;
+        }
+
+        public int getMulticastPort() {
+            return multicastPort;
         }
     }
 }
