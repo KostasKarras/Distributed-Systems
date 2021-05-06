@@ -1,7 +1,3 @@
-//OPTIONS 0 AND 4
-
-import jdk.swing.interop.SwingInterOpUtils;
-
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -39,9 +35,6 @@ public class BrokerImpl implements Broker{
     private static HashMap<String, ArrayList<SocketAddress>> hashtagSubscriptions;
     private static HashMap<String, ArrayList<SocketAddress>> channelSubscriptions;
 
-    //USAGE IN MULTICAST
-    private static boolean hashes_updated ;
-
     public static void main(String[] args) {
 
         new BrokerImpl().initialize(4321);
@@ -57,15 +50,12 @@ public class BrokerImpl implements Broker{
         hashtagSubscriptions = new HashMap<>();
         channelSubscriptions = new HashMap<>();
 
-        hashes_updated = false;
-
         //brokers.add(this);
 
         Socket connectionSocket = null;
 
         try {
             serverSocket = new ServerSocket(port, 60, InetAddress.getByName("localhost"));
-            System.out.println(serverSocket.getLocalSocketAddress());
 
             multicastIP = InetAddress.getByName("228.5.6.10");
             multicastPort = 5000;
@@ -83,12 +73,26 @@ public class BrokerImpl implements Broker{
             multicast_handler.start();
             //
 
+            //WAIT FOR CONNECTION WITH BROKER FOR SOME TIME
+            serverSocket.setSoTimeout(2000);
+            try {
+                connectionSocket = serverSocket.accept();
+                ObjectInputStream objectInputStream = new ObjectInputStream(connectionSocket.getInputStream());
+                int option = (int) objectInputStream.readObject();
+                brokerHashes = (TreeMap<Integer, SocketAddress>) objectInputStream.readObject();
+            } catch (SocketTimeoutException ste) {
+                brokerHashes.put(brokerHash, serverSocket.getLocalSocketAddress());
+            }
+            serverSocket.setSoTimeout(0);
+
+
             while(true) {
                 connectionSocket = serverSocket.accept();
                 new Handler(connectionSocket, current_threads).start();
                 current_threads++;
             }
-        } catch(IOException  e) {
+
+        } catch(IOException | ClassNotFoundException e) {
             /* Crash the server if IO fails. Something bad has happened. */
             throw new RuntimeException("Could not create ServerSocket ", e);
         } finally {
@@ -182,18 +186,6 @@ public class BrokerImpl implements Broker{
 
         //CLOSE SOCKET
         socket.close();
-
-    }
-
-    @Override
-    public synchronized void setBrokerHashes(ObjectInputStream objectInputStream) throws IOException,
-            ClassNotFoundException {
-
-        if (!hashes_updated) {
-            System.out.println("IN SET BROKER HASHES TO UPDATE");
-            brokerHashes = (TreeMap<Integer, SocketAddress>) objectInputStream.readObject();
-            hashes_updated = true;
-        }
 
     }
 
@@ -412,11 +404,6 @@ public class BrokerImpl implements Broker{
                         }
                     }
 
-                } else if (option == 10) { //RECEIVE BROKER HASHES IN FIRST CONNECTION
-
-                    setBrokerHashes(objectInputStream);
-                    System.out.println("IN OPTION 10");
-
                 }
                 try {
                     objectInputStream.close();
@@ -540,37 +527,29 @@ public class BrokerImpl implements Broker{
                     int brokerPort = Integer.parseInt(address[1]);
                     SocketAddress socketAddress = new InetSocketAddress(brokerIP, brokerPort);
 
-                    //CHECK IF IT WAS RECEIVED FROM THIS BROKER ITSELF
-                    if (!socketAddress.equals(serverSocket.getLocalSocketAddress())) {
+                    //UPDATE BROKER HASHES
+                    brokerHashes.put(brokerHash, socketAddress);
 
-                        //UPDATE BROKER HASHES
-                        brokerHashes.put(brokerHash, socketAddress);
+                    //SLEEP 1 SECOND TO MAKE SURE THAT SERVER SOCKET HAS STARTED LISTENING
+                    TimeUnit.SECONDS.sleep(1);
 
-                        //SEND UPDATED BROKER HASHES TO NEW BROKER
-                        Socket socket = new Socket();
-                        socket.connect(socketAddress);
-                        ObjectOutputStream objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
+                    //SEND UPDATED BROKER HASHES TO NEW BROKER
+                    Socket socket = new Socket();
+                    socket.connect(socketAddress);
+                    ObjectOutputStream objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
 
-                        objectOutputStream.writeObject(10);
-                        objectOutputStream.flush();
+                    objectOutputStream.writeObject(10);
+                    objectOutputStream.flush();
 
-                        objectOutputStream.writeObject(brokerHashes);
-                        objectOutputStream.flush();
+                    objectOutputStream.writeObject(brokerHashes);
+                    objectOutputStream.flush();
 
-                    }
                 }
             }
-            catch (IOException ioException) {
+            catch (IOException | InterruptedException ioException) {
                 ioException.printStackTrace();
             }
         }
 
-        public InetAddress getMulticastIP() {
-            return groupAddress;
-        }
-
-        public int getMulticastPort() {
-            return multicastPort;
-        }
     }
 }

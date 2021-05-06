@@ -20,7 +20,4 @@ interface Broker extends Node {
 
     public HashMap<ChannelKey, String> filterConsumers(HashMap<ChannelKey, String> videoList, String channelName);
 
-    public void setBrokerHashes(ObjectInputStream objectInputStream) throws IOException,
-            ClassNotFoundException;
-
 }
