@@ -9,8 +9,13 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -40,35 +45,48 @@ public class AppNodeImpl implements Publisher, Consumer{
     @Override
     public void initialize(int port) {
 
-        //CHANNEL NAME
-        channel = new Channel("USER");
-
         //FIRST CONNECTION
-        connect();
-
         try {
 
-            //THAT IS NOT CORRECT YET
+            System.out.println("Welcome !");
 
-            //SEND OPTION 4 FOR INITIALIZATION
-            objectOutputStream.writeObject(4);
-            objectOutputStream.flush();
+            //CONNECT TO RANDOM BROKER TO RECEIVE BROKER HASHES
+            getBrokerMap();
 
-            //RECEIVE BROKER HASHES
-            brokerHashes = (TreeMap<Integer, SocketAddress>) objectInputStream.readObject();
-            System.out.println(brokerHashes);//IT IS PRINTED BEFORE THE MENU. CHECK IT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            boolean unique;
 
-            //SEND CHANNEL NAME
-            objectOutputStream.writeObject(channel.getChannelName());
-            objectOutputStream.flush();
+            while (true) {
+                //CHANNEL NAME
+                Scanner input = new Scanner(System.in);
+                System.out.println(" Channel name : ");
+                String name = input.nextLine();
+                channel = new Channel(name);
 
-            //SEND SOCKET ADDRESS FOR CONNECTIONS
-            SocketAddress temp = new InetSocketAddress(InetAddress.getByName("localhost"), RequestHandler.port);
-            objectOutputStream.writeObject(temp);
-            objectOutputStream.flush();
+                //CONNECT TO APPROPRIATE BROKER
+                channelBroker = hashTopic(channel.getChannelName());
+                connect(channelBroker);
 
-            //WHATEVER ELSE WE NEED
+                //SEND OPTION 4 FOR INITIALIZATION
+                objectOutputStream.writeObject(4);
+                objectOutputStream.flush();
 
+                //SEND CHANNEL NAME
+                objectOutputStream.writeObject(channel.getChannelName());
+                objectOutputStream.flush();
+
+                //SEND SOCKET ADDRESS FOR CONNECTIONS
+                SocketAddress temp = new InetSocketAddress(InetAddress.getByName("localhost"), RequestHandler.port);
+                objectOutputStream.writeObject(temp);
+                objectOutputStream.flush();
+
+                //GET RESPONSE IF CHANNEL NAME IS UNIQUE
+                unique = (boolean) objectInputStream.readObject();
+                if (unique) {
+                    break;
+                }
+                System.out.println("This channel name already exists. Pick another.\n");
+
+            }
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         } finally {
@@ -79,15 +97,6 @@ public class AppNodeImpl implements Publisher, Consumer{
 
         runUser();
 
-        //THINK FOR TOMORROW THE IMPLEMENTATION!
-
-        /**
-         channel = new ChannelName("user");
-         ArrayList<String> videoHashtags = new ArrayList<>();
-         videoHashtags.add("First File");
-         VideoFile vf = new VideoFile("C:\\Users\\miked\\Videos\\Captures\\Numb (Official Video) - Linkin Park - YouTube - Google Chrome 2020-04-03 14-10-06.mp4", videoHashtags);
-         push("#TIPOTES", vf);
-         */
     }
 
     @Override
@@ -183,6 +192,58 @@ public class AppNodeImpl implements Publisher, Consumer{
         }
     }
 
+    public void notifyBrokersForChanges(ChannelKey channelKey, ArrayList<String> hashtags, String title, boolean action) {
+
+        if (!hashtags.isEmpty()) {
+            for (String hashtag : hashtags) {
+                SocketAddress socketAddress = hashTopic(hashtag);
+                connect(socketAddress);
+                try {
+                    objectOutputStream.writeObject(8);
+                    objectOutputStream.flush();
+
+                    objectOutputStream.writeObject("hashtag");
+                    objectOutputStream.flush();
+
+                    objectOutputStream.writeObject(hashtag);
+                    objectOutputStream.flush();
+
+                    objectOutputStream.writeObject(channelKey);
+                    objectOutputStream.flush();
+
+                    objectOutputStream.writeObject(title);
+                    objectOutputStream.flush();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    disconnect();
+                }
+            }
+        }
+
+        if (action) {
+            SocketAddress socketAddress = hashTopic(channelKey.getChannelName());
+            connect(socketAddress);
+            try {
+                objectOutputStream.writeObject(8);
+                objectOutputStream.flush();
+
+                objectOutputStream.writeObject("channel");
+                objectOutputStream.flush();
+
+                objectOutputStream.writeObject(channelKey);
+                objectOutputStream.flush();
+
+                objectOutputStream.writeObject(title);
+                objectOutputStream.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                disconnect();
+            }
+        }
+    }
+
     @Override
     public ArrayList<byte[]> generateChunks(VideoFile video) {
         ArrayList<byte[]> my_arraylist = new ArrayList<byte []>();
@@ -202,9 +263,17 @@ public class AppNodeImpl implements Publisher, Consumer{
         return my_arraylist;
     }
 
-    @Override
-    public List<Broker> getBrokers() {
-        return brokers;
+    public TreeMap<Integer, SocketAddress> getBrokerMap() {
+        /**DIMITRIS*/
+        connect();
+        try {
+            objectOutputStream.writeObject(0);
+            brokerHashes = (TreeMap<Integer, SocketAddress>) objectInputStream.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        disconnect();
+        return brokerHashes;
     }
 
     private void connect(SocketAddress socketAddress) {
@@ -244,7 +313,7 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
     @Override
-    public void updateNodes() {
+    public void updateNodes() throws SocketException {
 
     }
 
@@ -349,6 +418,9 @@ public class AppNodeImpl implements Publisher, Consumer{
                         objectOutputStream.writeObject(false);
                         objectOutputStream.flush();
                     }
+                } else if (option == 3) {
+                    String notificationMessage = (String) objectInputStream.readObject();
+                    System.out.println(notificationMessage);
                 }
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
@@ -370,7 +442,7 @@ public class AppNodeImpl implements Publisher, Consumer{
         int end = 0;
         String choice;
         do {
-            System.out.println("===== Menu =====");
+            System.out.println("\n===== Menu =====");
             //Consumer Methods
             System.out.println("1. Register User");
             System.out.println("2. Get Topic Video List");
@@ -380,9 +452,32 @@ public class AppNodeImpl implements Publisher, Consumer{
             System.out.println("5. Remove Hashtags from a Video");
             System.out.println("6. Upload Video");
             System.out.println("7. Delete Video");
+            System.out.println("8. Check Profile");
             System.out.println("0. Exit");
             choice = in.nextLine();
             if (choice.equals("1")) {
+                /**DIMITRIS*/
+                String topic;
+                System.out.print("Please select a topic (hashtag/channel) that you want to subscribe: ");
+                topic = in.nextLine();
+
+                SocketAddress socketAddress = hashTopic(topic);
+                connect(socketAddress);
+
+                try {
+                    objectOutputStream.writeObject(1);
+                    objectOutputStream.flush();
+
+                    objectOutputStream.writeObject(channel.getChannelName());
+                    objectOutputStream.flush();
+
+                    objectOutputStream.writeObject(topic);
+                    objectOutputStream.flush();
+                    String response = (String) objectInputStream.readObject();
+                    System.out.println(response);
+                } catch (IOException | ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
 
             } else if (choice.equals("2")) {
 
@@ -407,6 +502,12 @@ public class AppNodeImpl implements Publisher, Consumer{
                     objectOutputStream.writeObject(channel_or_hashtag);
                     objectOutputStream.flush();
 
+                    /**CHANGE*/
+                    //Write this user's channel name
+                    objectOutputStream.writeObject(channel.getChannelName());
+                    objectOutputStream.flush();
+                    /**END CHANGE*/
+
                     //Read videoList
                     videoList = (HashMap<ChannelKey, String>) objectInputStream.readObject();
                 } catch (IOException | ClassNotFoundException e) {
@@ -416,12 +517,19 @@ public class AppNodeImpl implements Publisher, Consumer{
                 }
 
                 //CHOOSE SOME VIDEO OR GO BACK
+                File nf = null;
                 boolean wantVideo = true;
-                Scanner in2 = new Scanner(System.in);
                 while (wantVideo) {
-                    System.out.println(videoList);
+                    //System.out.println(videoList);
+                    //MICHAEL
+                    for (Map.Entry<ChannelKey, String> item : videoList.entrySet()) {
+                        System.out.println("Channel Name : " + item.getKey().getChannelName() + "     Video ID : "
+                                + item.getKey().getVideoID() + "    Video Name : " +item.getValue());
+                    }
+                    //
                     System.out.print("Do you want to see a video from these? (y/n)");
-                    String answer = in.nextLine();
+                    Scanner in2 = new Scanner(System.in);//////////////////////////////////////////////////////////////////////////////////////
+                    String answer = in2.nextLine();
 
                     if (answer.equals("y")) {
                         try {
@@ -445,7 +553,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
                             //RECEIVE VIDEO FILE CHUNKS
                             byte[] chunk;
-                            ArrayList<byte[]> chunks = new ArrayList<byte[]>();
+                            ArrayList<byte[]> chunks = new ArrayList<>();
                             int size = (int) objectInputStream.readObject();
 
                             if (size == 0) {
@@ -459,7 +567,8 @@ public class AppNodeImpl implements Publisher, Consumer{
                                     chunks.add(chunk);
                                 }
                                 try {
-                                    File nf = new File("C:/Users/Kostas/Desktop/test.mp4");
+                                    nf = new File("Fetched Videos\\" + channel.getChannelName() + "_"
+                                            + channelName + "_" + videoID + ".mp4");
                                     for (byte[] ar : chunks) {
                                         FileOutputStream fw = new FileOutputStream(nf, true);
                                         try {
@@ -468,22 +577,17 @@ public class AppNodeImpl implements Publisher, Consumer{
                                             fw.close();
                                         }
                                     }
+
                                 } catch (IOException e) {
                                     e.printStackTrace();
+                                } finally {
+                                    disconnect();
                                 }
-                                //Open vlc and play video from java!!!
-                                ProcessBuilder pb = new ProcessBuilder("C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe",
-                                        "C:\\Users\\Kostas\\Desktop\\test.mp4");
-                                Process start = pb.start();
                             }
-                        } catch (IOException | ClassNotFoundException e) {
+                        }catch(IOException | ClassNotFoundException e){
                             e.printStackTrace();
-                        } finally {
-                            disconnect();
                         }
-                    }
-                    else
-                        wantVideo = false;
+                    } else wantVideo = false;
                 }
             } else if (choice.equals("3")) {
 
@@ -530,6 +634,10 @@ public class AppNodeImpl implements Publisher, Consumer{
                     for (Map.Entry<String, String> item : notificationHashtags.entrySet())
                         notifyBrokersForHashTags(item.getKey(), item.getValue());
                 }
+
+                ChannelKey channelKey = new ChannelKey(channel.getChannelName(), video.getVideoID());
+                notifyBrokersForChanges(channelKey, hashtags, video.getVideoName(), false);
+
             } else if (choice.equals("5")) {
 
                 int videoID;
@@ -604,10 +712,28 @@ public class AppNodeImpl implements Publisher, Consumer{
                 VideoFile video = new VideoFile(filepath, associatedHashtags, videoTitle);
 
                 HashMap<String, String> notificationHashtags = channel.addVideoFile(video);
+
+                //MICHAEL
+                //CREATED A FOLDER TO STORE UPLOADED VIDEOS
+                try {
+                    Path source = Paths.get(filepath);
+                    Path target = Paths.get("Uploaded Videos\\" + videoTitle + ".mp4");
+                    Files.copy(source, target);
+                } catch (IOException e) {
+                    if (e instanceof FileAlreadyExistsException) {
+                        System.out.println("There is already a video with that name. Upload cancelled...\n");
+                    }
+                    channel.removeVideoFile(video);
+                }
+                //
+
                 if (!notificationHashtags.isEmpty()) {
                     for (Map.Entry<String, String> item : notificationHashtags.entrySet())
                         notifyBrokersForHashTags(item.getKey(), item.getValue());
                 }
+
+                ChannelKey channelKey = new ChannelKey(channel.getChannelName(), video.getVideoID());
+                notifyBrokersForChanges(channelKey, associatedHashtags, videoTitle, true);
 
             } else if (choice.equals("7")){
 
@@ -626,11 +752,25 @@ public class AppNodeImpl implements Publisher, Consumer{
                 VideoFile video = channel.getVideoFile_byID(videoID);
 
                 HashMap<String, String> notificationHashtags = channel.removeVideoFile(video);
+
+                //MICHAEL
+                //DELETE VIDEO FROM UPLOADED VIDEOS
+                try {
+                    Path file = Paths.get("Uploaded Videos\\" + video.getVideoName() + ".mp4");
+                    Files.delete(file);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                //
+
                 if (!notificationHashtags.isEmpty()) {
                     for (Map.Entry<String, String> item : notificationHashtags.entrySet())
                         notifyBrokersForHashTags(item.getKey(), item.getValue());
                 }
-            } else if (choice.equals("0")) {
+
+            }else if (choice.equals("8")) { //CHECK PROFILE
+                System.out.println(channel);
+            }else if (choice.equals("0")) {
                 end = 1;
             }
         } while (end == 0);
