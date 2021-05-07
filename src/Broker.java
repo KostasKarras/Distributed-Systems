@@ -1,6 +1,9 @@
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.util.HashMap;
 import java.util.List;
 
-interface Broker extends Node{
+interface Broker extends Node {
 
     static final List<Consumer> registerUsers = null;
     static final List<Publisher> registerPublishers = null;
@@ -15,5 +18,6 @@ interface Broker extends Node{
 
     public void notifyBrokersOnChanges();
 
-    public void filterConsumers( );
+    public HashMap<ChannelKey, String> filterConsumers(HashMap<ChannelKey, String> videoList, String channelName);
+
 }
