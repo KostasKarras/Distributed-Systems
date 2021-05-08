@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 
 public class AppNodeImpl implements Publisher, Consumer{
 
@@ -32,6 +33,10 @@ public class AppNodeImpl implements Publisher, Consumer{
     private static TreeMap<Integer, SocketAddress> brokerHashes = new TreeMap<>();
     private static SocketAddress channelBroker;//NOT USED
 
+    private static ServerSocket serverSocket;
+    private static InetAddress multicastIP;
+    private static int multicastPort;
+
     public static void main(String[] args) {
 
         new AppNodeImpl().initialize(4950);
@@ -43,7 +48,11 @@ public class AppNodeImpl implements Publisher, Consumer{
         //FIRST CONNECTION
         try {
 
+            multicastIP = InetAddress.getByName("228.0.0.0");
+            multicastPort = 5000;
+
             System.out.println("Welcome !");
+
 
             //CONNECT TO RANDOM BROKER TO RECEIVE BROKER HASHES
             getBrokerMap();
@@ -53,7 +62,7 @@ public class AppNodeImpl implements Publisher, Consumer{
             while (true) {
                 //CHANNEL NAME
                 Scanner input = new Scanner(System.in);
-                System.out.println(" Channel name : ");
+                System.out.println("Channel name : ");
                 String name = input.nextLine();
                 channel = new Channel(name);
 
@@ -70,7 +79,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                 objectOutputStream.flush();
 
                 //SEND SOCKET ADDRESS FOR CONNECTIONS
-                SocketAddress temp = new InetSocketAddress(InetAddress.getByName("localhost"), RequestHandler.port);
+                SocketAddress temp = new InetSocketAddress(InetAddress.getLocalHost(), RequestHandler.port);
                 objectOutputStream.writeObject(temp);
                 objectOutputStream.flush();
 
@@ -88,7 +97,7 @@ public class AppNodeImpl implements Publisher, Consumer{
             disconnect();
         }
 
-        new RequestHandler().start();
+        new RequestHandler(serverSocket).start();
 
         runUser();
 
@@ -177,7 +186,7 @@ public class AppNodeImpl implements Publisher, Consumer{
             objectOutputStream.writeObject(action);
             objectOutputStream.flush();
 
-            SocketAddress temp = new InetSocketAddress(InetAddress.getByName("localhost"), RequestHandler.port);
+            SocketAddress temp = new InetSocketAddress(InetAddress.getLocalHost(), RequestHandler.port);
             objectOutputStream.writeObject(temp);
             objectOutputStream.flush();
         } catch (IOException e) {
@@ -260,6 +269,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     public TreeMap<Integer, SocketAddress> getBrokerMap() {
         /**DIMITRIS*/
+
         connect();
         try {
             objectOutputStream.writeObject(0);
@@ -269,6 +279,33 @@ public class AppNodeImpl implements Publisher, Consumer{
         }
         disconnect();
         return brokerHashes;
+
+        /*
+        System.out.println("I am in here");
+
+        try {
+            serverSocket = new ServerSocket(4950, 60, InetAddress.getLocalHost());
+            updateNodes();
+            serverSocket.setSoTimeout(2000);
+            try {
+                Socket connectionSocket = serverSocket.accept();
+                ObjectInputStream objectInputStream = new ObjectInputStream(connectionSocket.getInputStream());
+                int option = (int) objectInputStream.readObject();
+                brokerHashes = (TreeMap<Integer, SocketAddress>) objectInputStream.readObject();
+            } catch (SocketTimeoutException ste) {
+                System.out.println("Can't connect to a server. Terminating....");
+                System.exit(-1);
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+            serverSocket.setSoTimeout(0);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+        */
+
     }
 
     private void connect(SocketAddress socketAddress) {
@@ -286,7 +323,7 @@ public class AppNodeImpl implements Publisher, Consumer{
     public void connect() {
 
         try {
-            requestSocket = new Socket(InetAddress.getByName("127.0.0.1"), 4321);
+            requestSocket = new Socket(InetAddress.getByName("172.17.0.2"), 4321);
             objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
             objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
         } catch (UnknownHostException unknownHost) {
@@ -296,6 +333,8 @@ public class AppNodeImpl implements Publisher, Consumer{
         }
 
     }
+
+
 
     public void disconnect() {
         try {
@@ -308,10 +347,37 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
     @Override
-    public void updateNodes() throws SocketException {
+    public void updateNodes() throws IOException {
+
+        System.out.println("In update Nodes");
+
+        MulticastSocket socket = new MulticastSocket(multicastPort);
+        socket.joinGroup(multicastIP);
+
+        //SEND % AND SOCKET ADDRESS TO RECEIVE BROKERHASHES
+        String appNodeChar = "%";
+        String address = serverSocket.getLocalSocketAddress().toString();
+        String appNodeChar_address = appNodeChar + "," + address;
+        byte[] buffer = appNodeChar_address.getBytes();
+
+        //MAKE PACKET AND SEND IT
+        DatagramPacket packet = new DatagramPacket(buffer, buffer.length, multicastIP, multicastPort);
+        socket.send(packet);
+
+        try {
+            TimeUnit.SECONDS.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        System.out.println("Packet sent");
+
+        socket.leaveGroup(multicastIP);
+
+        //CLOSE SOCKET
+        socket.close();
 
     }
-
     @Override
     public void register(Broker broker, String str) {
 
@@ -344,10 +410,14 @@ public class AppNodeImpl implements Publisher, Consumer{
         private static final int port = 4900;
         private int current_threads = 1;
 
+        public RequestHandler(ServerSocket serverSocket) {
+            this.serverSocket = serverSocket;
+        }
+
         public void run() {
 
             try {
-                serverSocket = new ServerSocket(port, 60, InetAddress.getByName("localhost"));
+                serverSocket = new ServerSocket(port, 60, InetAddress.getLocalHost());
 
                 while(true) {
                     connectionSocket = serverSocket.accept();

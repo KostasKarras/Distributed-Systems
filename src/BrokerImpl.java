@@ -44,6 +44,12 @@ public class BrokerImpl implements Broker{
     @Override
     public void initialize(int port)  {
 
+        try {
+            System.out.println(InetAddress.getLocalHost());
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+
         brokerHashtags = new HashMap<>();
         brokerChannelNames = new HashMap<>();
         brokerHashes = new TreeMap<>();
@@ -55,9 +61,9 @@ public class BrokerImpl implements Broker{
         Socket connectionSocket = null;
 
         try {
-            serverSocket = new ServerSocket(port, 60, InetAddress.getByName("localhost"));
+            serverSocket = new ServerSocket(port, 60, InetAddress.getLocalHost());
 
-            multicastIP = InetAddress.getByName("228.5.6.10");
+            multicastIP = InetAddress.getByName("228.0.0.0");
             multicastPort = 5000;
 
             //CALCULATE BROKERHASH
@@ -515,20 +521,36 @@ public class BrokerImpl implements Broker{
                     //WAIT TO RECEIVE SOME PACKET
                     multicastSocket.receive(packet_receiver);
 
+                    //INITIALISE SOCKET ADDRESS
+                    SocketAddress socketAddress;
+
                     //SPLIT BROKER HASH AND HASH ADDRESS
-                    String hash_address = new String(packet_receiver.getData(), packet_receiver.getOffset(),
+                    String packet_to_string = new String(packet_receiver.getData(), packet_receiver.getOffset(),
                                                      packet_receiver.getLength());
-                    String[] hash_address_array = hash_address.split(",");
-                    int brokerHash = Integer.parseInt(hash_address_array[0]);
 
-                    //SPLIT SOCKET ADDRESS TO IP AND PORT AND CREATE SOCKET ADDRESS OBJECT
-                    String[] address = hash_address_array[1].split(":");
-                    InetAddress brokerIP = InetAddress.getByName(address[0].substring(10));
-                    int brokerPort = Integer.parseInt(address[1]);
-                    SocketAddress socketAddress = new InetSocketAddress(brokerIP, brokerPort);
+                    if (packet_to_string.charAt(0) == '%') { //APP NODE MESSAGE
+                        String[] appNodeChar_address_array = packet_to_string.split(",");
 
-                    //UPDATE BROKER HASHES
-                    brokerHashes.put(brokerHash, socketAddress);
+                        //SPLIT SOCKET ADDRESS TO IP AND PORT AND CREATE SOCKET ADDRESS OBJECT
+                        String[] address = appNodeChar_address_array[1].split(":");
+                        InetAddress brokerIP = InetAddress.getByName(address[0].substring(10));
+                        int brokerPort = Integer.parseInt(address[1]);
+                        socketAddress = new InetSocketAddress(brokerIP, brokerPort);
+
+                    }
+                    else { //BROKER MESSAGE
+                        String[] hash_address_array = packet_to_string.split(",");
+                        int brokerHash = Integer.parseInt(hash_address_array[0]);
+
+                        //SPLIT SOCKET ADDRESS TO IP AND PORT AND CREATE SOCKET ADDRESS OBJECT
+                        String[] address = hash_address_array[1].split(":");
+                        InetAddress brokerIP = InetAddress.getByName(address[0].substring(10));
+                        int brokerPort = Integer.parseInt(address[1]);
+                        socketAddress = new InetSocketAddress(brokerIP, brokerPort);
+
+                        //UPDATE BROKER HASHES
+                        brokerHashes.put(brokerHash, socketAddress);
+                    }
 
                     //SLEEP 1 SECOND TO MAKE SURE THAT SERVER SOCKET HAS STARTED LISTENING
                     TimeUnit.SECONDS.sleep(1);
