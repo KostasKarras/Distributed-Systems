@@ -37,6 +37,8 @@ public class AppNodeImpl implements Publisher, Consumer{
     private static InetAddress multicastIP;
     private static int multicastPort;
 
+    private static SocketAddress hear_address;
+
     public static void main(String[] args) {
 
         new AppNodeImpl().initialize(4950);
@@ -48,6 +50,8 @@ public class AppNodeImpl implements Publisher, Consumer{
         //FIRST CONNECTION
         try {
 
+            serverSocket = new ServerSocket(port, 60, InetAddress.getLocalHost());
+
             multicastIP = InetAddress.getByName("228.0.0.0");
             multicastPort = 5000;
 
@@ -55,7 +59,15 @@ public class AppNodeImpl implements Publisher, Consumer{
 
 
             //CONNECT TO RANDOM BROKER TO RECEIVE BROKER HASHES
-            getBrokerMap();
+            //getBrokerMap();
+
+            connect();
+            objectOutputStream.writeObject(0);
+            objectOutputStream.flush();
+
+            brokerHashes = (TreeMap<Integer, SocketAddress>) objectInputStream.readObject();
+
+            disconnect();
 
             boolean unique;
 
@@ -79,8 +91,14 @@ public class AppNodeImpl implements Publisher, Consumer{
                 objectOutputStream.flush();
 
                 //SEND SOCKET ADDRESS FOR CONNECTIONS
-                SocketAddress temp = new InetSocketAddress(InetAddress.getLocalHost(), RequestHandler.port);
-                objectOutputStream.writeObject(temp);
+                //SocketAddress temp = new InetSocketAddress(InetAddress.getLocalHost(), RequestHandler.port);
+                String string_socket = serverSocket.getLocalSocketAddress().toString().split("/")[1];
+                String[] array = string_socket.split(":");
+                InetAddress hear_ip = InetAddress.getByName(array[0]);
+                int hear_port = Integer.parseInt(array[1]);
+                hear_address = new InetSocketAddress(hear_ip, hear_port);
+                System.out.println(hear_address);
+                objectOutputStream.writeObject(hear_address);
                 objectOutputStream.flush();
 
                 //GET RESPONSE IF CHANNEL NAME IS UNIQUE
@@ -186,8 +204,7 @@ public class AppNodeImpl implements Publisher, Consumer{
             objectOutputStream.writeObject(action);
             objectOutputStream.flush();
 
-            SocketAddress temp = new InetSocketAddress(InetAddress.getLocalHost(), RequestHandler.port);
-            objectOutputStream.writeObject(temp);
+            objectOutputStream.writeObject(hear_address);
             objectOutputStream.flush();
         } catch (IOException e) {
             e.printStackTrace();
@@ -417,7 +434,7 @@ public class AppNodeImpl implements Publisher, Consumer{
         public void run() {
 
             try {
-                serverSocket = new ServerSocket(port, 60, InetAddress.getLocalHost());
+               //serverSocket = new ServerSocket(port, 60, InetAddress.getLocalHost());
 
                 while(true) {
                     connectionSocket = serverSocket.accept();
@@ -556,7 +573,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                 //Connect to that broker
                 connect(socketAddress);
 
-                HashMap<ChannelKey, String> videoList = null;
+                HashMap<ChannelKey, String> videoList = new HashMap<>();
 
                 try {
                     //Write option
@@ -581,9 +598,13 @@ public class AppNodeImpl implements Publisher, Consumer{
                     disconnect();
                 }
 
+                boolean wantVideo = true;
+                if (videoList.isEmpty()) {
+                    System.out.println("No videos\n");
+                    wantVideo = false;
+                }
                 //CHOOSE SOME VIDEO OR GO BACK
                 File nf = null;
-                boolean wantVideo = true;
                 Scanner in2 = new Scanner(System.in);
                 while (wantVideo) {
                     //System.out.println(videoList);

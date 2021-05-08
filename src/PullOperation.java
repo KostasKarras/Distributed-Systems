@@ -49,22 +49,16 @@ public class PullOperation {
 
     public HashMap<ChannelKey, String> pullChannel(SocketAddress publisherAddress) {
 
-        String[] ipPort;
-        InetAddress publisher_ip;
         Socket pullSocket;
         ObjectOutputStream objectOutputStream;
         ObjectInputStream objectInputStream;
         HashMap<ChannelKey, String> channelVideoList = null;
-        int port;
 
         try {
-            //Split ip and port from address
-            ipPort = publisherAddress.toString().split(":");
-            publisher_ip = InetAddress.getByName(ipPort[0].substring(10));
-            port = Integer.parseInt(ipPort[1]);
 
             //Make connection with client
-            pullSocket = new Socket(publisher_ip, port);
+            pullSocket = new Socket();
+            pullSocket.connect(publisherAddress);
             objectInputStream = new ObjectInputStream(pullSocket.getInputStream());
             objectOutputStream = new ObjectOutputStream(pullSocket.getOutputStream());
 
@@ -95,21 +89,15 @@ public class PullOperation {
         String channel = channelKey.getChannelName();
         int videoID = channelKey.getVideoID();
 
-        String[] ipPort;
-        InetAddress publisher_ip;
         Socket pullSocket;
         ObjectInputStream objectInputStream;
         ObjectOutputStream objectOutputStream;
-        int port;
 
         try {
-            //Split ip and port from address
-            ipPort = publisherAddress.toString().split(":");
-            publisher_ip = InetAddress.getByName(ipPort[0].substring(10));
-            port = Integer.parseInt(ipPort[1]);
 
             //Make connection with publisher
-            pullSocket = new Socket(publisher_ip, port);
+            pullSocket = new Socket();
+            pullSocket.connect(publisherAddress);
             objectInputStream = new ObjectInputStream(pullSocket.getInputStream());
             objectOutputStream = new ObjectOutputStream(pullSocket.getOutputStream());
 
@@ -151,8 +139,6 @@ public class PullOperation {
 
         private final String hashtag;
         public SocketAddress address;
-        public InetAddress publisher_ip;
-        public int port;
 
         /**
          * Constructor
@@ -160,13 +146,7 @@ public class PullOperation {
         public PullThread(String hashtag, SocketAddress address) {
             this.hashtag = hashtag;
             this.address = address;
-            try {
-                String[] ipPort = address.toString().split(":");
-                publisher_ip = InetAddress.getByName(ipPort[0].substring(10));
-                port = Integer.parseInt(ipPort[1]);
-            } catch (UnknownHostException e) {
-                e.printStackTrace();
-            }
+
         }
 
         /**
@@ -178,7 +158,8 @@ public class PullOperation {
             try {
 
                 //Make connection with client
-                Socket pullSocket = new Socket(publisher_ip, port);
+                Socket pullSocket = new Socket();
+                pullSocket.connect(address);
                 ObjectInputStream objectInputStream = new ObjectInputStream(pullSocket.getInputStream());
                 ObjectOutputStream objectOutputStream = new ObjectOutputStream(pullSocket.getOutputStream());
 

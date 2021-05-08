@@ -94,6 +94,7 @@ public class BrokerImpl implements Broker{
 
             while(true) {
                 connectionSocket = serverSocket.accept();
+                System.out.println(connectionSocket.getRemoteSocketAddress());
                 new Handler(connectionSocket, current_threads).start();
                 current_threads++;
             }
@@ -289,7 +290,7 @@ public class BrokerImpl implements Broker{
                     /**CHANGE*/
                     String channelName = (String) objectInputStream.readObject();
                     /**END CHANGE*/
-                    HashMap<ChannelKey, String> videoList = null;
+                    HashMap<ChannelKey, String> videoList = new HashMap<>();
 
                     if (channel_or_hashtag.charAt(0) == '#') {
                         ArrayList<SocketAddress> addresses = brokerHashtags.get(channel_or_hashtag);
@@ -302,9 +303,11 @@ public class BrokerImpl implements Broker{
                     }
 
                     /**CHANGE FILTER*/
-                    for (ChannelKey channelKey : videoList.keySet()) {
-                        if (channelKey.getChannelName() == channelName) {
-                            videoList.remove(channelKey);
+                    if (videoList.isEmpty()) {
+                        for (ChannelKey channelKey : videoList.keySet()) {
+                            if (channelKey.getChannelName().equals(channelName)) {
+                                videoList.remove(channelKey);
+                            }
                         }
                     }
                     //HashMap<ChannelKey, String> videoListUpdated = filterConsumers(videoList, channelName);
@@ -348,6 +351,7 @@ public class BrokerImpl implements Broker{
                     //RECEIVE CHANNEL NAME AND SOCKET ADDRESS FOR CONNECTIONS
                     String channel_name = (String) objectInputStream.readObject();
                     SocketAddress socketAddress = (SocketAddress) objectInputStream.readObject();
+                    System.out.println(socketAddress);
 
                     //CHECK IF CHANNEL NAME IS UNIQUE
                     if (brokerChannelNames.containsKey(channel_name)) {
@@ -392,21 +396,25 @@ public class BrokerImpl implements Broker{
                     }
                 } else if (option == 8) { //Notify Brokers for changes
                     String action = (String) objectInputStream.readObject();
-                    if (action == "hashtag") {
+                    if (action.equals("hashtag")) {
                         String hashtag = (String) objectInputStream.readObject();
                         ChannelKey channelKey = (ChannelKey) objectInputStream.readObject();
                         String title = (String) objectInputStream.readObject();
 
-                        for (SocketAddress socketAddress : hashtagSubscriptions.get(hashtag)) {
-                            new Notifier(socketAddress, channelKey, title, hashtag).start();
+                        if (hashtagSubscriptions.get(hashtag) != null){
+                            for (SocketAddress socketAddress : hashtagSubscriptions.get(hashtag)) {
+                                new Notifier(socketAddress, channelKey, title, hashtag).start();
+                            }
                         }
 
-                    } else if (action == "channel") {
+                    } else if (action.equals("channel")) {
                         ChannelKey channelKey = (ChannelKey) objectInputStream.readObject();
                         String title = (String) objectInputStream.readObject();
 
-                        for (SocketAddress socketAddress : channelSubscriptions.get(channelKey.getChannelName())) {
-                            new Notifier(socketAddress, channelKey, title, null).start();
+                        if (channelSubscriptions.get(channelKey.getChannelName()) != null) {
+                            for (SocketAddress socketAddress : channelSubscriptions.get(channelKey.getChannelName())) {
+                                new Notifier(socketAddress, channelKey, title, null).start();
+                            }
                         }
                     }
 
