@@ -11,6 +11,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -52,6 +53,12 @@ public class BrokerImpl implements Broker{
     @Override
     public void initialize(int port)  {
 
+        try {
+            System.out.println(InetAddress.getLocalHost());
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+
         brokerHashtags = new HashMap<>();
         brokerChannelNames = new HashMap<>();
         brokerHashes = new TreeMap<>();
@@ -63,9 +70,9 @@ public class BrokerImpl implements Broker{
         Socket connectionSocket = null;
 
         try {
-            serverSocket = new ServerSocket(port, 60, InetAddress.getByName("localhost"));
+            serverSocket = new ServerSocket(port, 60, InetAddress.getLocalHost());
 
-            multicastIP = InetAddress.getByName("228.5.6.10");
+            multicastIP = InetAddress.getByName("228.0.0.0");
             multicastPort = 5000;
 
             //CALCULATE BROKERHASH
@@ -96,6 +103,7 @@ public class BrokerImpl implements Broker{
 
             while(true) {
                 connectionSocket = serverSocket.accept();
+                System.out.println(connectionSocket.getRemoteSocketAddress());
                 new Handler(connectionSocket, current_threads).start();
                 current_threads++;
             }
@@ -291,7 +299,7 @@ public class BrokerImpl implements Broker{
                     /**CHANGE*/
                     String channelName = (String) objectInputStream.readObject();
                     /**END CHANGE*/
-                    HashMap<ChannelKey, String> videoList = null;
+                    HashMap<ChannelKey, String> videoList = new HashMap<>();
 
                     if (channel_or_hashtag.charAt(0) == '#') {
                         ArrayList<SocketAddress> addresses = brokerHashtags.get(channel_or_hashtag);
@@ -304,9 +312,11 @@ public class BrokerImpl implements Broker{
                     }
 
                     /**CHANGE FILTER*/
-                    for (ChannelKey channelKey : videoList.keySet()) {
-                        if (channelKey.getChannelName() == channelName) {
-                            videoList.remove(channelKey);
+                    if (videoList.isEmpty()) {
+                        for (ChannelKey channelKey : videoList.keySet()) {
+                            if (channelKey.getChannelName().equals(channelName)) {
+                                videoList.remove(channelKey);
+                            }
                         }
                     }
                     //HashMap<ChannelKey, String> videoListUpdated = filterConsumers(videoList, channelName);
@@ -350,6 +360,7 @@ public class BrokerImpl implements Broker{
                     //RECEIVE CHANNEL NAME AND SOCKET ADDRESS FOR CONNECTIONS
                     String channel_name = (String) objectInputStream.readObject();
                     SocketAddress socketAddress = (SocketAddress) objectInputStream.readObject();
+                    System.out.println(socketAddress);
 
                     //CHECK IF CHANNEL NAME IS UNIQUE
                     if (brokerChannelNames.containsKey(channel_name)) {
@@ -399,16 +410,20 @@ public class BrokerImpl implements Broker{
                         ChannelKey channelKey = (ChannelKey) objectInputStream.readObject();
                         String title = (String) objectInputStream.readObject();
 
-                        for (SocketAddress socketAddress : hashtagSubscriptions.get(hashtag)) {
-                            new Notifier(socketAddress, channelKey, title, hashtag).start();
+                        if (hashtagSubscriptions.get(hashtag) != null){
+                            for (SocketAddress socketAddress : hashtagSubscriptions.get(hashtag)) {
+                                new Notifier(socketAddress, channelKey, title, hashtag).start();
+                            }
                         }
 
                     } else if (action.equals("channel")) {
                         ChannelKey channelKey = (ChannelKey) objectInputStream.readObject();
                         String title = (String) objectInputStream.readObject();
 
-                        for (SocketAddress socketAddress : channelSubscriptions.get(channelKey.getChannelName())) {
-                            new Notifier(socketAddress, channelKey, title, null).start();
+                        if (channelSubscriptions.get(channelKey.getChannelName()) != null) {
+                            for (SocketAddress socketAddress : channelSubscriptions.get(channelKey.getChannelName())) {
+                                new Notifier(socketAddress, channelKey, title, null).start();
+                            }
                         }
                     }
 
@@ -523,20 +538,36 @@ public class BrokerImpl implements Broker{
                     //WAIT TO RECEIVE SOME PACKET
                     multicastSocket.receive(packet_receiver);
 
+                    //INITIALISE SOCKET ADDRESS
+                    SocketAddress socketAddress;
+
                     //SPLIT BROKER HASH AND HASH ADDRESS
-                    String hash_address = new String(packet_receiver.getData(), packet_receiver.getOffset(),
+                    String packet_to_string = new String(packet_receiver.getData(), packet_receiver.getOffset(),
                             packet_receiver.getLength());
-                    String[] hash_address_array = hash_address.split(",");
-                    int brokerHash = Integer.parseInt(hash_address_array[0]);
 
-                    //SPLIT SOCKET ADDRESS TO IP AND PORT AND CREATE SOCKET ADDRESS OBJECT
-                    String[] address = hash_address_array[1].split(":");
-                    InetAddress brokerIP = InetAddress.getByName(address[0].substring(10));
-                    int brokerPort = Integer.parseInt(address[1]);
-                    SocketAddress socketAddress = new InetSocketAddress(brokerIP, brokerPort);
+                    if (packet_to_string.charAt(0) == '%') { //APP NODE MESSAGE
+                        String[] appNodeChar_address_array = packet_to_string.split(",");
 
-                    //UPDATE BROKER HASHES
-                    brokerHashes.put(brokerHash, socketAddress);
+                        //SPLIT SOCKET ADDRESS TO IP AND PORT AND CREATE SOCKET ADDRESS OBJECT
+                        String[] address = appNodeChar_address_array[1].split(":");
+                        InetAddress brokerIP = InetAddress.getByName(address[0].substring(10));
+                        int brokerPort = Integer.parseInt(address[1]);
+                        socketAddress = new InetSocketAddress(brokerIP, brokerPort);
+
+                    }
+                    else { //BROKER MESSAGE
+                        String[] hash_address_array = packet_to_string.split(",");
+                        int brokerHash = Integer.parseInt(hash_address_array[0]);
+
+                        //SPLIT SOCKET ADDRESS TO IP AND PORT AND CREATE SOCKET ADDRESS OBJECT
+                        String[] address = hash_address_array[1].split(":");
+                        InetAddress brokerIP = InetAddress.getByName(address[0].substring(10));
+                        int brokerPort = Integer.parseInt(address[1]);
+                        socketAddress = new InetSocketAddress(brokerIP, brokerPort);
+
+                        //UPDATE BROKER HASHES
+                        brokerHashes.put(brokerHash, socketAddress);
+                    }
 
                     //SLEEP 1 SECOND TO MAKE SURE THAT SERVER SOCKET HAS STARTED LISTENING
                     TimeUnit.SECONDS.sleep(1);
