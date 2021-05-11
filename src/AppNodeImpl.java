@@ -50,6 +50,11 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     private static SocketAddress hear_address;
 
+    /**KOSTAS*/
+    private static ArrayList<String> subscribedToChannels = new ArrayList<>();
+    private static ArrayList<String> subscribedToHashtags = new ArrayList<>();
+    /**KOSTAS*/
+
     public static void main(String[] args) {
 
         new AppNodeImpl().initialize(4950);
@@ -349,7 +354,13 @@ public class AppNodeImpl implements Publisher, Consumer{
     public void connect() {
 
         try {
-            requestSocket = new Socket(InetAddress.getByName("172.31.224.1"), 4321);
+//            ArrayList<Integer> temp = new ArrayList<>();
+//            temp.add(4421);
+//            temp.add(4321);
+//            temp.add(4221);
+//            Random rn = new Random();
+//            int index = rn.nextInt(3) + 1;
+            requestSocket = new Socket(InetAddress.getByName("192.168.56.1"), 4321);
             objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
             objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
         } catch (UnknownHostException unknownHost) {
@@ -535,9 +546,9 @@ public class AppNodeImpl implements Publisher, Consumer{
         do {
             System.out.println("\n===== Menu =====");
             //Consumer Methods
-            System.out.println("1. Register User");
+            System.out.println("1. Register User to hashtag or channel");
             System.out.println("2. Get Topic Video List");
-            System.out.println("3. Play Data");
+            System.out.println("3. Unregister User from hashtag or channel");
             //Publisher Methods
             System.out.println("4. Add Hashtags to a Video");
             System.out.println("5. Remove Hashtags from a Video");
@@ -551,6 +562,13 @@ public class AppNodeImpl implements Publisher, Consumer{
                 String topic;
                 System.out.print("Please select a topic (hashtag/channel) that you want to subscribe: ");
                 topic = in.nextLine();
+                /**KOSTAS*/
+                if (topic.charAt(0) == '#'){
+                    subscribedToHashtags.add(topic);
+                } else {
+                    subscribedToChannels.add(topic);
+                }
+                /**KOSTAS*/
 
                 SocketAddress socketAddress = hashTopic(topic);
                 connect(socketAddress);
@@ -685,7 +703,116 @@ public class AppNodeImpl implements Publisher, Consumer{
                     } else wantVideo = false;
                 }
             } else if (choice.equals("3")) {
+                /**KOSTAS*/
+                String topic;
+                System.out.print("Please select 'channel' if you want to unsubscribe from a channel " +
+                        "or 'hashtag' to unsubscribe from a hashtag: ");
+                topic = in.nextLine();
 
+                if (topic.equals("channel")){
+                    boolean wantUnsubscribe = true;
+                    Scanner in2 = new Scanner(System.in);
+                    String answer = "";
+                    while (wantUnsubscribe){
+                        if (subscribedToChannels.isEmpty()){
+                            if (answer.equals(""))
+                                System.out.println("You aren't subscribed to any channel. Unsubscribe cancelled...");
+                            answer = "n";
+                        } else {
+                            System.out.println("Channels that you are subscribed: ");
+                            System.out.println(subscribedToChannels);
+                            System.out.println("Do you want to unsubscribe from one of the above channels? (y/n)");
+                            answer = in2.nextLine();
+                        }
+
+                        if (answer.equals("y")){
+                            try {
+                                System.out.println("Give me the channel name that you want to unsubscribe: ");
+                                String channelName = in2.nextLine();
+
+                                if (!subscribedToChannels.contains(channelName)) {
+                                    System.out.println("You are not subscribed to channel " + channelName);
+                                    continue;
+                                }
+
+                                subscribedToChannels.remove(channelName);
+
+                                SocketAddress socketAddress1 = hashTopic(channelName);//broker who is responsible for this channel
+
+                                connect(socketAddress1);
+
+                                objectOutputStream.writeObject(9);
+                                objectOutputStream.flush();
+
+                                objectOutputStream.writeObject(channelName);
+                                objectOutputStream.flush();
+
+                                objectOutputStream.writeObject(hear_address);
+                                objectOutputStream.flush();
+
+                                System.out.println("You unsubscribed from channel " + channelName + " successfully.");
+
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        } else {
+                            wantUnsubscribe = false;
+                        }
+                    }
+                } else if (topic.equals("hashtag")){
+                    boolean wantUnsubscribe = true;
+                    Scanner in2 = new Scanner(System.in);
+                    String answer = "";
+                    while (wantUnsubscribe){
+                        if (subscribedToHashtags.isEmpty()){
+                            if (answer.equals(""))
+                                System.out.println("You aren't subscribed to any hashtag. Unsubscribe cancelled...");
+                            answer = "n";
+                        } else {
+                            System.out.println("Hashtags that you are subscribed: ");
+                            System.out.println(subscribedToHashtags);
+                            System.out.println("Do you want to unsubscribe from one of the above hashtags? (y/n)");
+                            answer = in2.nextLine();
+                        }
+
+                        if (answer.equals("y")){
+                            try {
+                                System.out.println("Give me the hashtag that you want to unsubscribe: ");
+                                String hashtag = in2.nextLine();
+
+                                if (!subscribedToHashtags.contains(hashtag)) {
+                                    System.out.println("You are not subscribed to hashtag " + hashtag);
+                                    continue;
+                                }
+
+                                subscribedToHashtags.remove(hashtag);
+
+                                SocketAddress socketAddress1 = hashTopic(hashtag);//broker who is responsible for this hashtag
+
+                                connect(socketAddress1);
+
+                                objectOutputStream.writeObject(9);
+                                objectOutputStream.flush();
+
+                                objectOutputStream.writeObject(hashtag);
+                                objectOutputStream.flush();
+
+                                objectOutputStream.writeObject(hear_address);
+                                objectOutputStream.flush();
+
+                                System.out.println("You unsubscribed from hashtag " + hashtag + " successfully.");
+
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        } else {
+                            wantUnsubscribe = false;
+                        }
+                    }
+                } else {
+                    System.out.println("You didn't choose 'channel' or 'hashtag'. Unsubscribe cancelled...");
+                }
+                /**KOSTAS*/
             } else if (choice.equals("4")) {
 
                 int videoID;
@@ -781,9 +908,9 @@ public class AppNodeImpl implements Publisher, Consumer{
 
                 JFileChooser chooser = new JFileChooser(){
                     @Override
-                    protected JDialog createDialog( Component parent ) throws HeadlessException {
-                        JDialog jDialog = super.createDialog( parent );
-                        jDialog.setAlwaysOnTop( true );
+                    protected JDialog createDialog(Component parent) throws HeadlessException {
+                        JDialog jDialog = super.createDialog(parent);
+                        jDialog.setAlwaysOnTop(true);
                         return jDialog;
                     }
                 };
