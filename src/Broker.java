@@ -1,5 +1,3 @@
-import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.util.HashMap;
 import java.util.List;
 
@@ -10,14 +8,14 @@ interface Broker extends Node {
 
     public int calculateKeys(String id);
 
-    public Publisher acceptConnection(Publisher publisher);
+//    public Publisher acceptConnection(Publisher publisher);
+//
+//    public Consumer acceptConnection(Consumer consumer);
+//
+//    public void notifyPublisher(String str);
 
-    public Consumer acceptConnection(Consumer consumer);
+//    public void notifyBrokersOnChanges();
 
-    public void notifyPublisher(String str);
-
-    public void notifyBrokersOnChanges();
-
-    public HashMap<ChannelKey, String> filterConsumers(HashMap<ChannelKey, String> videoList, String channelName);
+    public HashMap<ChannelKey, String> filterConsumers(HashMap<ChannelKey, String> videoList, String channelName);//DEN XRHSIMOPOIEITAI
 
 }
