@@ -79,6 +79,7 @@ public class BrokerImpl implements Broker{
             String serverSocketAddress = serverSocket.getLocalSocketAddress().toString();
             ID = String.format("Broker_%s", serverSocketAddress);
             brokerHash = calculateKeys(ID);
+            System.out.println(brokerHash);
 
             //GET LIST FOR BROKERHASHES FROM OTHER BROKERS
             updateNodes();
@@ -360,7 +361,7 @@ public class BrokerImpl implements Broker{
                     //RECEIVE CHANNEL NAME AND SOCKET ADDRESS FOR CONNECTIONS
                     String channel_name = (String) objectInputStream.readObject();
                     SocketAddress socketAddress = (SocketAddress) objectInputStream.readObject();
-                    System.out.println(socketAddress);
+                    //System.out.println(socketAddress);
 
                     //CHECK IF CHANNEL NAME IS UNIQUE
                     if (brokerChannelNames.containsKey(channel_name)) {
@@ -427,6 +428,21 @@ public class BrokerImpl implements Broker{
                         }
                     }
 
+                } else if (option == 9){
+                    /**KOSTAS*/
+                    String channelNameOrHashtag = (String) objectInputStream.readObject();
+                    SocketAddress socketAddress = (SocketAddress) objectInputStream.readObject();
+
+                    if (channelNameOrHashtag.charAt(0) != '#') {
+                        ArrayList<SocketAddress> updatedSocketAddresses = new ArrayList<>(channelSubscriptions.get(channelNameOrHashtag));
+                        updatedSocketAddresses.remove(socketAddress);
+                        channelSubscriptions.put(channelNameOrHashtag, updatedSocketAddresses);
+                    } else{
+                        ArrayList<SocketAddress> updatedSocketAddresses = new ArrayList<>(hashtagSubscriptions.get(channelNameOrHashtag));
+                        updatedSocketAddresses.remove(socketAddress);
+                        hashtagSubscriptions.put(channelNameOrHashtag, updatedSocketAddresses);
+                    }
+                    /**KOSTAS*/
                 }
                 try {
                     objectInputStream.close();
