@@ -141,29 +141,29 @@ public class BrokerImpl implements Broker{
         }
     }
 
-    @Override
-    public Publisher acceptConnection(Publisher publisher) {
-        return null;
-    }
+//    @Override
+//    public Publisher acceptConnection(Publisher publisher) {
+//        return null;
+//    }
+//
+//    @Override
+//    public Consumer acceptConnection(Consumer consumer) {
+//        return null;
+//    }
+//
+//    @Override
+//    public void notifyPublisher(String str) {
+//
+//    }
 
-    @Override
-    public Consumer acceptConnection(Consumer consumer) {
-        return null;
-    }
-
-    @Override
-    public void notifyPublisher(String str) {
-
-    }
-
-    @Override
-    public void notifyBrokersOnChanges() {
-        connect();
-
-    }
+//    @Override
+//    public void notifyBrokersOnChanges() {
+//        connect();
+//    }
 
     @Override
     public HashMap<ChannelKey, String> filterConsumers(HashMap<ChannelKey, String> videoList, String channelName) {
+
         for (ChannelKey channelKey : videoList.keySet()) {
             if (channelKey.getChannelName() == channelName) {
                 videoList.remove(channelKey);
@@ -173,10 +173,10 @@ public class BrokerImpl implements Broker{
     }
 
 
-    @Override
-    public TreeMap<Integer, SocketAddress> getBrokerMap() {
-        return brokerHashes;
-    }
+//    @Override
+//    public TreeMap<Integer, SocketAddress> getBrokerMap() {
+//        return brokerHashes;
+//    }
 
     public void connect() {
         //Pass
@@ -233,7 +233,6 @@ public class BrokerImpl implements Broker{
 
             try {
                 int option = (int) objectInputStream.readObject();
-                // If-else statements and calling of specific acceptConnection.
 
                 /** Node Requests Handle */
                 if (option == 0) {  // Send Broker Hashes
@@ -244,13 +243,12 @@ public class BrokerImpl implements Broker{
 
                 /** Consumer - User Requests Handle */
                 else if (option == 1) {  // Register User
-                    /**DIMITRIS*/
+
                     String channel_name = (String) objectInputStream.readObject();
                     String topic = (String) objectInputStream.readObject();
                     String responseSuccess = "Subscribed to " + topic + " successfully.";
                     String responseFailure = "Attempt to subscribe has failed. Unable to find channel " + topic + ".";
 
-                    /**MAYBE CHANGE THE WAY WE CREATE AN ADDRESS*/
                     SocketAddress user_hear_address = brokerChannelNames.get(channel_name);
 
                     if (topic.charAt(0) == '#') {
@@ -297,9 +295,7 @@ public class BrokerImpl implements Broker{
                     PullOperation pull_operation = new PullOperation();
 
                     String channel_or_hashtag = (String) objectInputStream.readObject();
-                    /**CHANGE*/
                     String channelName = (String) objectInputStream.readObject();
-                    /**END CHANGE*/
                     HashMap<ChannelKey, String> videoList = new HashMap<>();
 
                     if (channel_or_hashtag.charAt(0) == '#') {
@@ -354,6 +350,7 @@ public class BrokerImpl implements Broker{
                         objectOutputStream.writeObject("This channel doesn't exist");
                         objectOutputStream.flush();
                     }
+
                 } else if (option == 4) { //FIRST CONNECTION
 
                     boolean unique = true;
@@ -405,6 +402,7 @@ public class BrokerImpl implements Broker{
                         }
                     }
                 } else if (option == 8) { //Notify Brokers for changes
+
                     String action = (String) objectInputStream.readObject();
                     if (action.equals("hashtag")) {
                         String hashtag = (String) objectInputStream.readObject();
@@ -429,7 +427,7 @@ public class BrokerImpl implements Broker{
                     }
 
                 } else if (option == 9){
-                    /**KOSTAS*/
+
                     String channelNameOrHashtag = (String) objectInputStream.readObject();
                     SocketAddress socketAddress = (SocketAddress) objectInputStream.readObject();
 
@@ -442,7 +440,6 @@ public class BrokerImpl implements Broker{
                         updatedSocketAddresses.remove(socketAddress);
                         hashtagSubscriptions.put(channelNameOrHashtag, updatedSocketAddresses);
                     }
-                    /**KOSTAS*/
                 }
                 try {
                     objectInputStream.close();
@@ -456,8 +453,6 @@ public class BrokerImpl implements Broker{
             }
         }
     }
-
-
 
     /**NEW HANDLER TO SEND NOTIFICATION FOR NEW VIDEOS TO SUBSCRIBED USERS*/
     class Notifier extends Thread {
@@ -605,6 +600,5 @@ public class BrokerImpl implements Broker{
                 ioException.printStackTrace();
             }
         }
-
     }
 }
