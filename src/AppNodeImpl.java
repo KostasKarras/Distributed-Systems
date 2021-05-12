@@ -41,7 +41,7 @@ public class AppNodeImpl implements Publisher, Consumer{
     private static Channel channel;
 
     private static TreeMap<Integer, SocketAddress> brokerHashes = new TreeMap<>();
-    private static SocketAddress channelBroker;//NOT USED
+    private static SocketAddress channelBroker;
 
     private static ServerSocket serverSocket;
     private static InetAddress multicastIP;
@@ -49,14 +49,12 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     private static SocketAddress hear_address;
 
-    /**KOSTAS*/
     private static ArrayList<String> subscribedToChannels = new ArrayList<>();
     private static ArrayList<String> subscribedToHashtags = new ArrayList<>();
-    /**KOSTAS*/
 
     public static void main(String[] args) {
 
-        new AppNodeImpl().initialize(4950);
+        new AppNodeImpl().initialize(4960);
     }
 
     @Override
@@ -67,22 +65,14 @@ public class AppNodeImpl implements Publisher, Consumer{
 
             serverSocket = new ServerSocket(port, 60, InetAddress.getLocalHost());
 
-            multicastIP = InetAddress.getByName("228.0.0.0");
-            multicastPort = 5000;
+//            multicastIP = InetAddress.getByName("228.0.0.0");
+//            multicastPort = 5000;
 
             System.out.println("Welcome !");
 
 
             //CONNECT TO RANDOM BROKER TO RECEIVE BROKER HASHES
-            //getBrokerMap();
-
-            connect();
-            objectOutputStream.writeObject(0);
-            objectOutputStream.flush();
-
-            brokerHashes = (TreeMap<Integer, SocketAddress>) objectInputStream.readObject();
-
-            disconnect();
+//            getBrokerMap();
 
             boolean unique;
 
@@ -95,6 +85,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
                 //CONNECT TO APPROPRIATE BROKER
                 channelBroker = hashTopic(channel.getChannelName());
+                System.out.println("I WILL CONNECT TO BROKER: " + channelBroker);
                 connect(channelBroker);
 
                 //SEND OPTION 4 FOR INITIALIZATION
@@ -213,14 +204,29 @@ public class AppNodeImpl implements Publisher, Consumer{
     @Override
     public SocketAddress hashTopic(String hashtopic) {
 
+        /**KOSTAS-START*/
         int digest;
+        connect();
+        try {
+            objectOutputStream.writeObject(2);
+            objectOutputStream.flush();
+
+            brokerHashes = (TreeMap<Integer, SocketAddress>) objectInputStream.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        } finally {
+            disconnect();
+        }
+        /**KOSTAS-END*/
+
         SocketAddress brokerAddress = brokerHashes.get(brokerHashes.firstKey());
         try {
-            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+            MessageDigest sha256 = MessageDigest.getInstance("SHA-1");
             byte[] bb = sha256.digest(hashtopic.getBytes(StandardCharsets.UTF_8));
             BigInteger bigInteger = new BigInteger(1, bb);
             digest = bigInteger.intValue();
 
+            System.out.println("My hash is: " + digest);
             //Fit to the right broker
             for (int hash : brokerHashes.keySet()) {
                 if (digest <= hash) {
@@ -231,8 +237,7 @@ public class AppNodeImpl implements Publisher, Consumer{
         }
         catch (NoSuchAlgorithmException nsae) {
             nsae.printStackTrace();
-        }
-        finally {
+        } finally {
             return brokerAddress;
         }
     }
@@ -359,17 +364,20 @@ public class AppNodeImpl implements Publisher, Consumer{
         return my_arraylist;
     }
 
-    public TreeMap<Integer, SocketAddress> getBrokerMap() {
-
-        connect();
-        try {
-            objectOutputStream.writeObject(0);
-            brokerHashes = (TreeMap<Integer, SocketAddress>) objectInputStream.readObject();
-        } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        disconnect();
-        return brokerHashes;
+//    public TreeMap<Integer, SocketAddress> getBrokerMap() {
+//
+//        connect();
+//        try {
+//            objectOutputStream.writeObject(2);
+//            objectOutputStream.flush();
+//
+//            brokerHashes = (TreeMap<Integer, SocketAddress>) objectInputStream.readObject();
+//        } catch (IOException | ClassNotFoundException e) {
+//            e.printStackTrace();
+//        } finally {
+//            disconnect();
+//        }
+//        return brokerHashes;
 
         /*
         System.out.println("I am in here");
@@ -395,9 +403,10 @@ public class AppNodeImpl implements Publisher, Consumer{
         return null;
         */
 
-    }
+//    }
 
     private void connect(SocketAddress socketAddress) {
+
         try {
             requestSocket = new Socket();
             requestSocket.connect(socketAddress);
@@ -412,7 +421,9 @@ public class AppNodeImpl implements Publisher, Consumer{
     public void connect() {
 
         try {
-            requestSocket = new Socket(InetAddress.getByName("192.168.56.1"), 4321);
+            /**KOSTAS-START*/
+            requestSocket = new Socket(InetAddress.getByName("192.168.56.1"), 4000);
+            /**KOSTAS-START*/
             objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
             objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
         } catch (UnknownHostException unknownHost) {
@@ -432,38 +443,38 @@ public class AppNodeImpl implements Publisher, Consumer{
         }
     }
 
-    @Override
-    public void updateNodes() throws IOException {
-
-        System.out.println("In update Nodes");
-
-        MulticastSocket socket = new MulticastSocket(multicastPort);
-        socket.joinGroup(multicastIP);
-
-        //SEND % AND SOCKET ADDRESS TO RECEIVE BROKERHASHES
-        String appNodeChar = "%";
-        String address = serverSocket.getLocalSocketAddress().toString();
-        String appNodeChar_address = appNodeChar + "," + address;
-        byte[] buffer = appNodeChar_address.getBytes();
-
-        //MAKE PACKET AND SEND IT
-        DatagramPacket packet = new DatagramPacket(buffer, buffer.length, multicastIP, multicastPort);
-        socket.send(packet);
-
-        try {
-            TimeUnit.SECONDS.sleep(2000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        System.out.println("Packet sent");
-
-        socket.leaveGroup(multicastIP);
-
-        //CLOSE SOCKET
-        socket.close();
-
-    }
+//    @Override
+//    public void updateNodes() throws IOException {
+//
+//        System.out.println("In update Nodes");
+//
+//        MulticastSocket socket = new MulticastSocket(multicastPort);
+//        socket.joinGroup(multicastIP);
+//
+//        //SEND % AND SOCKET ADDRESS TO RECEIVE BROKERHASHES
+//        String appNodeChar = "%";
+//        String address = serverSocket.getLocalSocketAddress().toString();
+//        String appNodeChar_address = appNodeChar + "," + address;
+//        byte[] buffer = appNodeChar_address.getBytes();
+//
+//        //MAKE PACKET AND SEND IT
+//        DatagramPacket packet = new DatagramPacket(buffer, buffer.length, multicastIP, multicastPort);
+//        socket.send(packet);
+//
+//        try {
+//            TimeUnit.SECONDS.sleep(2000);
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
+//
+//        System.out.println("Packet sent");
+//
+//        socket.leaveGroup(multicastIP);
+//
+//        //CLOSE SOCKET
+//        socket.close();
+//
+//    }
 
     @Override
     public void register(SocketAddress socketAddress, String topic) {
@@ -484,6 +495,10 @@ public class AppNodeImpl implements Publisher, Consumer{
 
             objectOutputStream.writeObject(topic);
             objectOutputStream.flush();
+
+            objectOutputStream.writeObject(hear_address);
+            objectOutputStream.flush();
+
             String response = (String) objectInputStream.readObject();
             System.out.println(response);
         } catch (IOException | ClassNotFoundException e) {
@@ -582,7 +597,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                     }
                 }
             }
-        }catch(IOException | ClassNotFoundException e){
+        } catch(IOException | ClassNotFoundException e){
             e.printStackTrace();
         }
     }
