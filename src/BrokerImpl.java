@@ -2,7 +2,16 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.math.BigInteger;
-import java.net.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.MulticastSocket;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketAddress;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -16,6 +25,10 @@ import java.util.concurrent.TimeUnit;
 public class BrokerImpl implements Broker{
 
     /** Class Variables */
+    private static Socket requestSocket;
+    private static ObjectOutputStream objectOutputStream;
+    private static ObjectInputStream objectInputStream;
+
     private static String ID;
     private static int brokerHash;
     private static int current_threads = 1;
@@ -37,7 +50,7 @@ public class BrokerImpl implements Broker{
 
     public static void main(String[] args) {
 
-        new BrokerImpl().initialize(4321);
+        new BrokerImpl().initialize(4421);
     }
 
 
@@ -56,41 +69,60 @@ public class BrokerImpl implements Broker{
         hashtagSubscriptions = new HashMap<>();
         channelSubscriptions = new HashMap<>();
 
-        //brokers.add(this);
-
         Socket connectionSocket = null;
 
         try {
             serverSocket = new ServerSocket(port, 60, InetAddress.getLocalHost());
 
-            multicastIP = InetAddress.getByName("228.0.0.0");
-            multicastPort = 5000;
+//            multicastIP = InetAddress.getByName("228.0.0.0");
+//            multicastPort = 5000;
 
             //CALCULATE BROKERHASH
             String serverSocketAddress = serverSocket.getLocalSocketAddress().toString();
             ID = String.format("Broker_%s", serverSocketAddress);
             brokerHash = calculateKeys(ID);
+            System.out.println(brokerHash);
 
             //GET LIST FOR BROKERHASHES FROM OTHER BROKERS
-            updateNodes();
+//            updateNodes();
 
             //HANDLE MULTICAST
-            Multicast_Handler multicast_handler = new Multicast_Handler(multicastIP, multicastPort);
-            multicast_handler.start();
+//            Multicast_Handler multicast_handler = new Multicast_Handler(multicastIP, multicastPort);
+//            multicast_handler.start();
             //
 
             //WAIT FOR CONNECTION WITH BROKER FOR SOME TIME
-            serverSocket.setSoTimeout(2000);
-            try {
-                connectionSocket = serverSocket.accept();
-                ObjectInputStream objectInputStream = new ObjectInputStream(connectionSocket.getInputStream());
-                int option = (int) objectInputStream.readObject();
-                brokerHashes = (TreeMap<Integer, SocketAddress>) objectInputStream.readObject();
-            } catch (SocketTimeoutException ste) {
-                brokerHashes.put(brokerHash, serverSocket.getLocalSocketAddress());
-            }
-            serverSocket.setSoTimeout(0);
+//            serverSocket.setSoTimeout(2000);
+//            try {
+//                connectionSocket = serverSocket.accept();
+//                ObjectInputStream objectInputStream = new ObjectInputStream(connectionSocket.getInputStream());
+//                int option = (int) objectInputStream.readObject();
+//                brokerHashes = (TreeMap<Integer, SocketAddress>) objectInputStream.readObject();
+//            } catch (SocketTimeoutException ste) {
+//                brokerHashes.put(brokerHash, serverSocket.getLocalSocketAddress());
+//            }
+//            serverSocket.setSoTimeout(0);
 
+            /**KOSTAS-START*/
+            connectToAddressKeeper();
+
+            objectOutputStream.writeObject(1);
+            objectOutputStream.flush();
+
+            String string_socket = serverSocket.getLocalSocketAddress().toString().split("/")[1];
+            String[] array = string_socket.split(":");
+            InetAddress hear_ip = InetAddress.getByName(array[0]);
+            int hear_port = Integer.parseInt(array[1]);
+            SocketAddress hear_address = new InetSocketAddress(hear_ip, hear_port);
+
+            objectOutputStream.writeObject(hear_address);
+            objectOutputStream.flush();
+
+            objectOutputStream.writeObject(brokerHash);
+            objectOutputStream.flush();
+
+            disconnectFromAddressKeeper();
+            /**KOSTAS-END*/
 
             while(true) {
                 connectionSocket = serverSocket.accept();
@@ -99,7 +131,7 @@ public class BrokerImpl implements Broker{
                 current_threads++;
             }
 
-        } catch(IOException | ClassNotFoundException e) {
+        } catch(IOException e) {
             /* Crash the server if IO fails. Something bad has happened. */
             throw new RuntimeException("Could not create ServerSocket ", e);
         } finally {
@@ -111,12 +143,40 @@ public class BrokerImpl implements Broker{
         }
     }
 
+    /**KOSTAS-START*/
+    public void connectToAddressKeeper(){
+
+        try {
+            requestSocket = new Socket(InetAddress.getByName("192.168.56.1"), 4000);
+            objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
+            objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
+        } catch (UnknownHostException unknownHost) {
+            System.err.println("You are trying to connect to an unknown host.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public  void disconnectFromAddressKeeper(){
+
+        try {
+            objectInputStream.close();
+            objectOutputStream.close();
+            requestSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    /**KOSTAS-END*/
+
     @Override
     public int calculateKeys(String id) {
 
         int digest = 0;
         try {
-            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+            /**KOSTAS-START*/
+            MessageDigest sha256 = MessageDigest.getInstance("SHA-1");
+            /**KOSTAS-END*/
             byte[] bb = sha256.digest(id.getBytes(StandardCharsets.UTF_8));
             BigInteger bigInteger = new BigInteger(1, bb);
             digest = bigInteger.intValue();
@@ -131,29 +191,29 @@ public class BrokerImpl implements Broker{
         }
     }
 
-    @Override
-    public Publisher acceptConnection(Publisher publisher) {
-        return null;
-    }
+//    @Override
+//    public Publisher acceptConnection(Publisher publisher) {
+//        return null;
+//    }
+//
+//    @Override
+//    public Consumer acceptConnection(Consumer consumer) {
+//        return null;
+//    }
+//
+//    @Override
+//    public void notifyPublisher(String str) {
+//
+//    }
 
-    @Override
-    public Consumer acceptConnection(Consumer consumer) {
-        return null;
-    }
-
-    @Override
-    public void notifyPublisher(String str) {
-
-    }
-
-    @Override
-    public void notifyBrokersOnChanges() {
-        connect();
-
-    }
+//    @Override
+//    public void notifyBrokersOnChanges() {
+//        connect();
+//    }
 
     @Override
     public HashMap<ChannelKey, String> filterConsumers(HashMap<ChannelKey, String> videoList, String channelName) {
+
         for (ChannelKey channelKey : videoList.keySet()) {
             if (channelKey.getChannelName() == channelName) {
                 videoList.remove(channelKey);
@@ -163,10 +223,10 @@ public class BrokerImpl implements Broker{
     }
 
 
-    @Override
-    public TreeMap<Integer, SocketAddress> getBrokerMap() {
-        return brokerHashes;
-    }
+//    @Override
+//    public TreeMap<Integer, SocketAddress> getBrokerMap() {
+//        return brokerHashes;
+//    }
 
     public void connect() {
         //Pass
@@ -176,25 +236,25 @@ public class BrokerImpl implements Broker{
         //Pass
     }
 
-    @Override
-    public void updateNodes() throws IOException {
-
-        DatagramSocket socket = new DatagramSocket(4322, InetAddress.getLocalHost());
-
-        //TRANSFORM BROKERHASH AND SOCKET ADDRESS TO STRING, CONCATENATE THEM AND TRANSFORM TO BYTE ARRAY
-        String hash = Integer.toString(brokerHash);
-        String address = serverSocket.getLocalSocketAddress().toString();
-        String hash_address = hash + "," + address;
-        byte[] buffer = hash_address.getBytes();
-
-        //MAKE PACKET AND SEND IT
-        DatagramPacket packet = new DatagramPacket(buffer, buffer.length, multicastIP, multicastPort);
-        socket.send(packet);
-
-        //CLOSE SOCKET
-        socket.close();
-
-    }
+//    @Override
+//    public void updateNodes() throws IOException {
+//
+//        DatagramSocket socket = new DatagramSocket(4322, InetAddress.getLocalHost());
+//
+//        //TRANSFORM BROKERHASH AND SOCKET ADDRESS TO STRING, CONCATENATE THEM AND TRANSFORM TO BYTE ARRAY
+//        String hash = Integer.toString(brokerHash);
+//        String address = serverSocket.getLocalSocketAddress().toString();
+//        String hash_address = hash + "," + address;
+//        byte[] buffer = hash_address.getBytes();
+//
+//        //MAKE PACKET AND SEND IT
+//        DatagramPacket packet = new DatagramPacket(buffer, buffer.length, multicastIP, multicastPort);
+//        socket.send(packet);
+//
+//        //CLOSE SOCKET
+//        socket.close();
+//
+//    }
 
     /** A Thread subclass to handle one client conversation */
     class Handler extends Thread {
@@ -223,7 +283,6 @@ public class BrokerImpl implements Broker{
 
             try {
                 int option = (int) objectInputStream.readObject();
-                // If-else statements and calling of specific acceptConnection.
 
                 /** Node Requests Handle */
                 if (option == 0) {  // Send Broker Hashes
@@ -234,14 +293,14 @@ public class BrokerImpl implements Broker{
 
                 /** Consumer - User Requests Handle */
                 else if (option == 1) {  // Register User
-                    /**DIMITRIS*/
+
                     String channel_name = (String) objectInputStream.readObject();
                     String topic = (String) objectInputStream.readObject();
                     String responseSuccess = "Subscribed to " + topic + " successfully.";
                     String responseFailure = "Attempt to subscribe has failed. Unable to find channel " + topic + ".";
 
-                    /**MAYBE CHANGE THE WAY WE CREATE AN ADDRESS*/
-                    SocketAddress user_hear_address = brokerChannelNames.get(channel_name);
+
+                    SocketAddress user_hear_address = (SocketAddress) objectInputStream.readObject();
 
                     if (topic.charAt(0) == '#') {
                         if (hashtagSubscriptions.containsKey(topic)) {
@@ -287,9 +346,7 @@ public class BrokerImpl implements Broker{
                     PullOperation pull_operation = new PullOperation();
 
                     String channel_or_hashtag = (String) objectInputStream.readObject();
-                    /**CHANGE*/
                     String channelName = (String) objectInputStream.readObject();
-                    /**END CHANGE*/
                     HashMap<ChannelKey, String> videoList = new HashMap<>();
 
                     if (channel_or_hashtag.charAt(0) == '#') {
@@ -344,6 +401,7 @@ public class BrokerImpl implements Broker{
                         objectOutputStream.writeObject("This channel doesn't exist");
                         objectOutputStream.flush();
                     }
+
                 } else if (option == 4) { //FIRST CONNECTION
 
                     boolean unique = true;
@@ -351,7 +409,7 @@ public class BrokerImpl implements Broker{
                     //RECEIVE CHANNEL NAME AND SOCKET ADDRESS FOR CONNECTIONS
                     String channel_name = (String) objectInputStream.readObject();
                     SocketAddress socketAddress = (SocketAddress) objectInputStream.readObject();
-                    System.out.println(socketAddress);
+                    //System.out.println(socketAddress);
 
                     //CHECK IF CHANNEL NAME IS UNIQUE
                     if (brokerChannelNames.containsKey(channel_name)) {
@@ -395,6 +453,7 @@ public class BrokerImpl implements Broker{
                         }
                     }
                 } else if (option == 8) { //Notify Brokers for changes
+
                     String action = (String) objectInputStream.readObject();
                     if (action.equals("hashtag")) {
                         String hashtag = (String) objectInputStream.readObject();
@@ -418,6 +477,20 @@ public class BrokerImpl implements Broker{
                         }
                     }
 
+                } else if (option == 9){
+
+                    String channelNameOrHashtag = (String) objectInputStream.readObject();
+                    SocketAddress socketAddress = (SocketAddress) objectInputStream.readObject();
+
+                    if (channelNameOrHashtag.charAt(0) != '#') {
+                        ArrayList<SocketAddress> updatedSocketAddresses = new ArrayList<>(channelSubscriptions.get(channelNameOrHashtag));
+                        updatedSocketAddresses.remove(socketAddress);
+                        channelSubscriptions.put(channelNameOrHashtag, updatedSocketAddresses);
+                    } else{
+                        ArrayList<SocketAddress> updatedSocketAddresses = new ArrayList<>(hashtagSubscriptions.get(channelNameOrHashtag));
+                        updatedSocketAddresses.remove(socketAddress);
+                        hashtagSubscriptions.put(channelNameOrHashtag, updatedSocketAddresses);
+                    }
                 }
                 try {
                     objectInputStream.close();
@@ -431,8 +504,6 @@ public class BrokerImpl implements Broker{
             }
         }
     }
-
-
 
     /**NEW HANDLER TO SEND NOTIFICATION FOR NEW VIDEOS TO SUBSCRIBED USERS*/
     class Notifier extends Thread {
@@ -488,98 +559,98 @@ public class BrokerImpl implements Broker{
     }
 
     /** A Thread subclass to handle broker communication */
-    class Multicast_Handler extends Thread {
-
-        private MulticastSocket multicastSocket;
-        private DatagramPacket packet_receiver;
-        private InetAddress groupAddress ;
-        private int multicastPort;
-
-        Multicast_Handler(InetAddress multicastIP, int multicastPort) {
-
-            try {
-
-                //INITIALIZE MULTICAST SOCKET
-                this.multicastPort = multicastPort;
-                InetAddress brokerIP = InetAddress.getLocalHost();
-                SocketAddress multicastSocketAddress = new InetSocketAddress(brokerIP, multicastPort);
-                multicastSocket = new MulticastSocket(multicastSocketAddress);
-
-                //JOIN GROUP ADDRESS
-                groupAddress = multicastIP;
-                multicastSocket.joinGroup(groupAddress);
-
-                //INITIALIZE DATAGRAM PACKET
-                byte buf[] = new byte[1000];
-                packet_receiver = new DatagramPacket(buf, buf.length);
-            }
-            catch (IOException ioException) {
-                ioException.printStackTrace();
-            }
-        }
-
-        @Override
-        public void run() {
-
-            //RECEIVE PACKET
-            try {
-
-                while (true) {
-
-                    //WAIT TO RECEIVE SOME PACKET
-                    multicastSocket.receive(packet_receiver);
-
-                    //INITIALISE SOCKET ADDRESS
-                    SocketAddress socketAddress;
-
-                    //SPLIT BROKER HASH AND HASH ADDRESS
-                    String packet_to_string = new String(packet_receiver.getData(), packet_receiver.getOffset(),
-                                                     packet_receiver.getLength());
-
-                    if (packet_to_string.charAt(0) == '%') { //APP NODE MESSAGE
-                        String[] appNodeChar_address_array = packet_to_string.split(",");
-
-                        //SPLIT SOCKET ADDRESS TO IP AND PORT AND CREATE SOCKET ADDRESS OBJECT
-                        String[] address = appNodeChar_address_array[1].split(":");
-                        InetAddress brokerIP = InetAddress.getByName(address[0].substring(10));
-                        int brokerPort = Integer.parseInt(address[1]);
-                        socketAddress = new InetSocketAddress(brokerIP, brokerPort);
-
-                    }
-                    else { //BROKER MESSAGE
-                        String[] hash_address_array = packet_to_string.split(",");
-                        int brokerHash = Integer.parseInt(hash_address_array[0]);
-
-                        //SPLIT SOCKET ADDRESS TO IP AND PORT AND CREATE SOCKET ADDRESS OBJECT
-                        String[] address = hash_address_array[1].split(":");
-                        InetAddress brokerIP = InetAddress.getByName(address[0].substring(10));
-                        int brokerPort = Integer.parseInt(address[1]);
-                        socketAddress = new InetSocketAddress(brokerIP, brokerPort);
-
-                        //UPDATE BROKER HASHES
-                        brokerHashes.put(brokerHash, socketAddress);
-                    }
-
-                    //SLEEP 1 SECOND TO MAKE SURE THAT SERVER SOCKET HAS STARTED LISTENING
-                    TimeUnit.SECONDS.sleep(1);
-
-                    //SEND UPDATED BROKER HASHES TO NEW BROKER
-                    Socket socket = new Socket();
-                    socket.connect(socketAddress);
-                    ObjectOutputStream objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
-
-                    objectOutputStream.writeObject(10);
-                    objectOutputStream.flush();
-
-                    objectOutputStream.writeObject(brokerHashes);
-                    objectOutputStream.flush();
-
-                }
-            }
-            catch (IOException | InterruptedException ioException) {
-                ioException.printStackTrace();
-            }
-        }
-
-    }
+//    class Multicast_Handler extends Thread {
+//
+//        private MulticastSocket multicastSocket;
+//        private DatagramPacket packet_receiver;
+//        private InetAddress groupAddress ;
+//        private int multicastPort;
+//
+//        Multicast_Handler(InetAddress multicastIP, int multicastPort) {
+//
+//            try {
+//
+//                //INITIALIZE MULTICAST SOCKET
+//                this.multicastPort = multicastPort;
+//                InetAddress brokerIP = InetAddress.getLocalHost();
+//                SocketAddress multicastSocketAddress = new InetSocketAddress(brokerIP, multicastPort);
+//                multicastSocket = new MulticastSocket(multicastSocketAddress);
+//
+//                //JOIN GROUP ADDRESS
+//                groupAddress = multicastIP;
+//                multicastSocket.joinGroup(groupAddress);
+//
+//                //INITIALIZE DATAGRAM PACKET
+//                byte buf[] = new byte[1000];
+//                packet_receiver = new DatagramPacket(buf, buf.length);
+//            }
+//            catch (IOException ioException) {
+//                ioException.printStackTrace();
+//            }
+//        }
+//
+//        @Override
+//        public void run() {
+//
+//            //RECEIVE PACKET
+//            try {
+//
+//                while (true) {
+//
+//                    //WAIT TO RECEIVE SOME PACKET
+//                    multicastSocket.receive(packet_receiver);
+//
+//                    //INITIALISE SOCKET ADDRESS
+//                    SocketAddress socketAddress;
+//
+//                    //SPLIT BROKER HASH AND HASH ADDRESS
+//                    String packet_to_string = new String(packet_receiver.getData(), packet_receiver.getOffset(),
+//                            packet_receiver.getLength());
+//
+//                    if (packet_to_string.charAt(0) == '%') { //APP NODE MESSAGE
+//                        String[] appNodeChar_address_array = packet_to_string.split(",");
+//
+//                        //SPLIT SOCKET ADDRESS TO IP AND PORT AND CREATE SOCKET ADDRESS OBJECT
+//                        String[] address = appNodeChar_address_array[1].split(":");
+//                        InetAddress brokerIP = InetAddress.getByName(address[0].substring(10));
+//                        int brokerPort = Integer.parseInt(address[1]);
+//                        socketAddress = new InetSocketAddress(brokerIP, brokerPort);
+//
+//                    }
+//                    else { //BROKER MESSAGE
+//                        String[] hash_address_array = packet_to_string.split(",");
+//                        int brokerHash = Integer.parseInt(hash_address_array[0]);
+//
+//                        //SPLIT SOCKET ADDRESS TO IP AND PORT AND CREATE SOCKET ADDRESS OBJECT
+//                        String[] address = hash_address_array[1].split(":");
+//                        InetAddress brokerIP = InetAddress.getByName(address[0].substring(10));
+//                        int brokerPort = Integer.parseInt(address[1]);
+//                        socketAddress = new InetSocketAddress(brokerIP, brokerPort);
+//
+//                        //UPDATE BROKER HASHES
+//                        brokerHashes.put(brokerHash, socketAddress);
+//                    }
+//
+//                    //SLEEP 1 SECOND TO MAKE SURE THAT SERVER SOCKET HAS STARTED LISTENING
+//                    TimeUnit.SECONDS.sleep(1);
+//
+//                    //SEND UPDATED BROKER HASHES TO NEW BROKER
+//                    Socket socket = new Socket();
+//                    socket.connect(socketAddress);
+//                    ObjectOutputStream objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
+//
+//                    objectOutputStream.writeObject(10);
+//                    objectOutputStream.flush();
+//
+//                    objectOutputStream.writeObject(brokerHashes);
+//                    objectOutputStream.flush();
+//
+//                }
+//            }
+//            catch (IOException | InterruptedException ioException) {
+//                ioException.printStackTrace();
+//            }
+//        }
+//    }
 }
+

@@ -1,5 +1,3 @@
-//TO STRING
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -135,9 +133,9 @@ public class Channel {
 
     /** Getters */
 
-    public ArrayList<String> getHashtagsPublished() {
-        return hashtagsPublished;
-    }
+//    public ArrayList<String> getHashtagsPublished() {
+//        return hashtagsPublished;
+//    }
 
     public ArrayList<VideoFile> getVideoFiles_byHashtag(String hashtag) {
         return hashtagVideoFilesMap.get(hashtag);
@@ -179,15 +177,16 @@ public class Channel {
     }
 
     /** Setters */
-    public void addHashTag(String hashtag) {
-        hashtagsPublished.add(hashtag);
-    }
+//    public void addHashTag(String hashtag) {
+//        hashtagsPublished.add(hashtag);
+//    }
 
-    public void removeHashTag(String hashtag) {
-        hashtagsPublished.remove(hashtag);
-    }
+//    public void removeHashTag(String hashtag) {
+//        hashtagsPublished.remove(hashtag);
+//    }
 
     public String toString() {
+
         String channelString;
         channelString = "Contents of channel " + channelName + "\r\n";
         for (Map.Entry<ChannelKey, String> key : ID_VideoNameMap.entrySet()) {
