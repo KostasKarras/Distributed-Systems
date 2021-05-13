@@ -54,7 +54,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     public static void main(String[] args) {
 
-        new AppNodeImpl().initialize(4960);
+        new AppNodeImpl().initialize(4950);
     }
 
     @Override
@@ -421,8 +421,11 @@ public class AppNodeImpl implements Publisher, Consumer{
     public void connect() {
 
         try {
+            Scanner in5 = new Scanner(System.in);
+            System.out.println("Please give me the InetAddress: ");
+            String inetAddress = in5.nextLine();
             /**KOSTAS-START*/
-            requestSocket = new Socket(InetAddress.getByName("192.168.56.1"), 4000);
+            requestSocket = new Socket(InetAddress.getByName(inetAddress), 4000);
             /**KOSTAS-START*/
             objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
             objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
