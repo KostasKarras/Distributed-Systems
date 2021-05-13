@@ -74,6 +74,18 @@ public class AppNodeImpl implements Publisher, Consumer{
             //CONNECT TO RANDOM BROKER TO RECEIVE BROKER HASHES
 //            getBrokerMap();
 
+            connect();
+            try {
+                objectOutputStream.writeObject(2);
+                objectOutputStream.flush();
+
+                brokerHashes = (TreeMap<Integer, SocketAddress>) objectInputStream.readObject();
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            } finally {
+                disconnect();
+            }
+
             boolean unique;
 
             while (true) {
@@ -204,20 +216,7 @@ public class AppNodeImpl implements Publisher, Consumer{
     @Override
     public SocketAddress hashTopic(String hashtopic) {
 
-        /**KOSTAS-START*/
         int digest;
-        connect();
-        try {
-            objectOutputStream.writeObject(2);
-            objectOutputStream.flush();
-
-            brokerHashes = (TreeMap<Integer, SocketAddress>) objectInputStream.readObject();
-        } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-        } finally {
-            disconnect();
-        }
-        /**KOSTAS-END*/
 
         SocketAddress brokerAddress = brokerHashes.get(brokerHashes.firstKey());
         try {
@@ -481,11 +480,6 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     @Override
     public void register(SocketAddress socketAddress, String topic) {
-        if (topic.charAt(0) == '#'){
-            subscribedToHashtags.add(topic);
-        } else {
-            subscribedToChannels.add(topic);
-        }
 
         connect(socketAddress);
 
@@ -504,6 +498,15 @@ public class AppNodeImpl implements Publisher, Consumer{
 
             String response = (String) objectInputStream.readObject();
             System.out.println(response);
+
+            if (response.contains("successfully")) {
+                if (topic.charAt(0) == '#') {
+                    subscribedToHashtags.add(topic);
+                } else {
+                    subscribedToChannels.add(topic);
+                }
+            }
+
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         } finally {
@@ -512,7 +515,7 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
     @Override
-    public void disconnect(SocketAddress socketAddress, String topic) {
+    public void unregister(SocketAddress socketAddress, String topic) {
 
         try {
             connect(socketAddress);
@@ -835,7 +838,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
                                 SocketAddress socketAddress1 = hashTopic(channelName);
 
-                                disconnect(socketAddress1, channelName);
+                                unregister(socketAddress1, channelName);
 
                             } catch (Exception e) {
                                 e.printStackTrace();
@@ -874,7 +877,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
                                 SocketAddress socketAddress1 = hashTopic(hashtag);
 
-                                disconnect(socketAddress1, hashtag);
+                                unregister(socketAddress1, hashtag);
 
                             } catch (Exception e) {
                                 e.printStackTrace();
@@ -925,74 +928,61 @@ public class AppNodeImpl implements Publisher, Consumer{
 
             } else if (choice.equals("6")) {
 
-                JFileChooser chooser = new JFileChooser(){
-                    @Override
-                    protected JDialog createDialog(Component parent) throws HeadlessException {
-                        JDialog jDialog = super.createDialog(parent);
-                        jDialog.setAlwaysOnTop(true);
-                        return jDialog;
-                    }
-                };
-                FileNameExtensionFilter filter = new FileNameExtensionFilter(".mp4", "mp4");
-                chooser.setFileFilter(filter);
-                int returnVal = chooser.showOpenDialog(null);
-                if (returnVal == JFileChooser.APPROVE_OPTION) {
-                    System.out.println("You chose to upload this file: "+chooser.getSelectedFile().getAbsolutePath());
+                String filepath;
+                String videoTitle;
+                String hashtag;
+                ArrayList<String> associatedHashtags = new ArrayList<>();
 
-                    ArrayList<String> associatedHashtags = new ArrayList<>();
+                System.out.print("Please give the path of the video you want to upload: ");
+                filepath = in.nextLine();
 
-                    String filepath = chooser.getSelectedFile().getAbsolutePath();
+                System.out.print("Title of the video: ");
+                videoTitle = in.nextLine();
 
-                    String videoTitle = chooser.getSelectedFile().getName().split("\\.")[0];
-
-                    String hashtag;
-                    while (true) {
-                        System.out.print("Do you want to add a hashtag to your video? (y/n) ");
-                        String answer = in.nextLine();
-                        if (answer.equals("n")) {
-                            break;
-                        }
-
-                        System.out.print("Please give a hashtag for the video: ");
-                        hashtag = in.nextLine();
-
-                        if (!associatedHashtags.contains(hashtag)) {
-                            associatedHashtags.add(hashtag);
-                        }
+                while (true) {
+                    System.out.print("Do you want to add a hashtag to your video? (y/n) ");
+                    String answer = in.nextLine();
+                    if (answer.equals("n")) {
+                        break;
                     }
 
-                    VideoFile video = new VideoFile(filepath, associatedHashtags, videoTitle);
+                    System.out.print("Please give a hashtag for the video: ");
+                    hashtag = in.nextLine();
 
-                    HashMap<String, String> notificationHashtags = channel.addVideoFile(video);
-
-                    boolean notExists = true;
-                    try {
-                        Path source = Paths.get(filepath);
-                        Path target = Paths.get("Uploaded Videos\\" + videoTitle + ".mp4");
-                        Files.copy(source, target);
-                    } catch (IOException e) {
-                        if (e instanceof FileAlreadyExistsException) {
-                            System.out.println("There is already a video with that name. Upload cancelled...\n");
-                        }
-                        notExists = false;
+                    if (!associatedHashtags.contains(hashtag)) {
+                        associatedHashtags.add(hashtag);
                     }
-
-                    if (notExists) {
-                        if (!notificationHashtags.isEmpty()) {
-                            for (Map.Entry<String, String> item : notificationHashtags.entrySet())
-                                notifyBrokersForHashTags(item.getKey(), item.getValue());
-                        }
-
-                        ChannelKey channelKey = new ChannelKey(channel.getChannelName(), video.getVideoID());
-                        notifyBrokersForChanges(channelKey, associatedHashtags, videoTitle, true);
-                    } else {
-                        channel.removeVideoFile(video);
-                    }
-                } else {
-                    System.out.println("You didn't choose any file. Upload cancelled...");
                 }
 
-            } else if (choice.equals("7")){
+                VideoFile video = new VideoFile(filepath, associatedHashtags, videoTitle);
+
+                HashMap<String, String> notificationHashtags = channel.addVideoFile(video);
+                boolean notExists = true;
+                try {
+                    Path source = Paths.get(filepath);
+                    Path target = Paths.get("Uploaded Videos\\" + videoTitle + ".mp4");
+                    Files.copy(source, target);
+                } catch (IOException e) {
+                    if (e instanceof FileAlreadyExistsException) {
+                        System.out.println("There is already a video with that name. Upload cancelled...\n");
+                    }
+                    notExists = false;
+                }
+
+                if (notExists) {
+                    if (!notificationHashtags.isEmpty()) {
+                        for (Map.Entry<String, String> item : notificationHashtags.entrySet())
+                            notifyBrokersForHashTags(item.getKey(), item.getValue());
+                    }
+
+                    ChannelKey channelKey = new ChannelKey(channel.getChannelName(), video.getVideoID());
+                    notifyBrokersForChanges(channelKey, associatedHashtags, videoTitle, true);
+                } else {
+                    channel.removeVideoFile(video);
+                }
+            }
+
+            else if (choice.equals("7")){
 
                 int videoID;
 

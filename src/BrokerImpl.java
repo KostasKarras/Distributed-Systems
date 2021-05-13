@@ -15,11 +15,7 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class BrokerImpl implements Broker{
@@ -147,7 +143,12 @@ public class BrokerImpl implements Broker{
     public void connectToAddressKeeper(){
 
         try {
-            requestSocket = new Socket(InetAddress.getByName("192.168.56.1"), 4000);
+            Scanner in5 = new Scanner(System.in);
+            System.out.println("Please give me the InetAddress: ");
+            String inetAddress = in5.nextLine();
+            /**KOSTAS-START*/
+            requestSocket = new Socket(InetAddress.getByName(inetAddress), 4000);
+            /**KOSTAS-START*/
             objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
             objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
         } catch (UnknownHostException unknownHost) {
@@ -360,7 +361,7 @@ public class BrokerImpl implements Broker{
                     }
 
                     /**CHANGE FILTER*/
-                    if (videoList.isEmpty()) {
+                    if (!videoList.isEmpty()) {
                         for (ChannelKey channelKey : videoList.keySet()) {
                             if (channelKey.getChannelName().equals(channelName)) {
                                 videoList.remove(channelKey);

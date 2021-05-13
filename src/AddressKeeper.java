@@ -19,6 +19,7 @@ public class AddressKeeper {
         Socket connectionSocket = null;
         try {
             serverSocket = new ServerSocket(4000, 60, InetAddress.getLocalHost());
+            System.out.println(InetAddress.getLocalHost());
 
             while(true) {
                 connectionSocket = serverSocket.accept();
