@@ -58,7 +58,7 @@ public class BrokerImpl implements Broker{
     public void initialize(int port)  {
 
         try {
-            System.out.println(InetAddress.getLocalHost());
+            System.out.println("Broker IP : " + InetAddress.getLocalHost().getHostAddress());
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
