@@ -15,7 +15,12 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Scanner;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
 public class BrokerImpl implements Broker{
@@ -27,7 +32,6 @@ public class BrokerImpl implements Broker{
 
     private static String ID;
     private static int brokerHash;
-    private static int current_threads = 1;
 
     private static List<Broker> brokers = null;
     private static List<Consumer> registeredUsers = null;
@@ -77,17 +81,17 @@ public class BrokerImpl implements Broker{
             String serverSocketAddress = serverSocket.getLocalSocketAddress().toString();
             ID = String.format("Broker_%s", serverSocketAddress);
             brokerHash = calculateKeys(ID);
-            System.out.println(brokerHash);
+            System.out.println("My hash is:" + brokerHash);
 
-            //GET LIST FOR BROKERHASHES FROM OTHER BROKERS
+//            GET LIST FOR BROKERHASHES FROM OTHER BROKERS
 //            updateNodes();
-
-            //HANDLE MULTICAST
+//
+//            HANDLE MULTICAST
 //            Multicast_Handler multicast_handler = new Multicast_Handler(multicastIP, multicastPort);
 //            multicast_handler.start();
-            //
-
-            //WAIT FOR CONNECTION WITH BROKER FOR SOME TIME
+//
+//
+//            WAIT FOR CONNECTION WITH BROKER FOR SOME TIME
 //            serverSocket.setSoTimeout(2000);
 //            try {
 //                connectionSocket = serverSocket.accept();
@@ -99,7 +103,7 @@ public class BrokerImpl implements Broker{
 //            }
 //            serverSocket.setSoTimeout(0);
 
-            /**KOSTAS-START*/
+            //GIVE TO ADDRESS KEEPER THE SOCKET ADDRESS OF THE BROKER
             connectToAddressKeeper();
 
             objectOutputStream.writeObject(1);
@@ -118,13 +122,11 @@ public class BrokerImpl implements Broker{
             objectOutputStream.flush();
 
             disconnectFromAddressKeeper();
-            /**KOSTAS-END*/
 
             while(true) {
                 connectionSocket = serverSocket.accept();
                 System.out.println(connectionSocket.getRemoteSocketAddress());
-                new Handler(connectionSocket, current_threads).start();
-                current_threads++;
+                new Handler(connectionSocket).start();
             }
 
         } catch(IOException e) {
@@ -139,18 +141,16 @@ public class BrokerImpl implements Broker{
         }
     }
 
-    /**KOSTAS-START*/
     public void connectToAddressKeeper(){
 
         try {
             Scanner in5 = new Scanner(System.in);
             System.out.println("Please give me the InetAddress: ");
             String inetAddress = in5.nextLine();
-            /**KOSTAS-START*/
             requestSocket = new Socket(InetAddress.getByName(inetAddress), 4000);
-            /**KOSTAS-START*/
             objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
             objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
+            System.out.println("Broker is running...");
         } catch (UnknownHostException unknownHost) {
             System.err.println("You are trying to connect to an unknown host.");
         } catch (IOException e) {
@@ -168,16 +168,13 @@ public class BrokerImpl implements Broker{
             e.printStackTrace();
         }
     }
-    /**KOSTAS-END*/
 
     @Override
     public int calculateKeys(String id) {
 
         int digest = 0;
         try {
-            /**KOSTAS-START*/
-            MessageDigest sha256 = MessageDigest.getInstance("SHA-1");
-            /**KOSTAS-END*/
+            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
             byte[] bb = sha256.digest(id.getBytes(StandardCharsets.UTF_8));
             BigInteger bigInteger = new BigInteger(1, bb);
             digest = bigInteger.intValue();
@@ -261,17 +258,14 @@ public class BrokerImpl implements Broker{
     class Handler extends Thread {
 
         Socket socket;
-        int threadNumber;
         ObjectInputStream objectInputStream;
         ObjectOutputStream objectOutputStream;
 
         /**
          * Construct a Handler
          */
-        Handler(Socket s, int current_thread) {
+        Handler(Socket s) {
             socket = s;
-            threadNumber = current_thread;
-            setName("Thread " + threadNumber);
             try {
                 objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
                 objectInputStream = new ObjectInputStream(socket.getInputStream());
@@ -360,7 +354,7 @@ public class BrokerImpl implements Broker{
                             videoList = pull_operation.pullChannel(publisherAddress);
                     }
 
-                    /**CHANGE FILTER*/
+                    /**FILTER-CONSUMERS-START*/
                     if (!videoList.isEmpty()) {
                         for (ChannelKey channelKey : videoList.keySet()) {
                             if (channelKey.getChannelName().equals(channelName)) {
@@ -368,8 +362,7 @@ public class BrokerImpl implements Broker{
                             }
                         }
                     }
-                    //HashMap<ChannelKey, String> videoListUpdated = filterConsumers(videoList, channelName);
-                    /**END CHANGE*/
+                    /**FILTER-CONSUMERS-END*/
 
                     objectOutputStream.writeObject(videoList);
 
@@ -654,4 +647,3 @@ public class BrokerImpl implements Broker{
 //        }
 //    }
 }
-

@@ -54,7 +54,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     public static void main(String[] args) {
 
-        new AppNodeImpl().initialize(4950);
+        new AppNodeImpl().initialize(4960);
     }
 
     @Override
@@ -68,12 +68,8 @@ public class AppNodeImpl implements Publisher, Consumer{
 //            multicastIP = InetAddress.getByName("228.0.0.0");
 //            multicastPort = 5000;
 
-            System.out.println("Welcome !");
 
-
-            //CONNECT TO RANDOM BROKER TO RECEIVE BROKER HASHES
-//            getBrokerMap();
-
+            //GET BROKERS
             connect();
             try {
                 objectOutputStream.writeObject(2);
@@ -86,6 +82,12 @@ public class AppNodeImpl implements Publisher, Consumer{
                 disconnect();
             }
 
+            System.out.println("Welcome !");
+
+
+//            CONNECT TO RANDOM BROKER TO RECEIVE BROKER HASHES
+//            getBrokerMap();
+
             boolean unique;
 
             while (true) {
@@ -97,7 +99,6 @@ public class AppNodeImpl implements Publisher, Consumer{
 
                 //CONNECT TO APPROPRIATE BROKER
                 channelBroker = hashTopic(channel.getChannelName());
-                System.out.println("I WILL CONNECT TO BROKER: " + channelBroker);
                 connect(channelBroker);
 
                 //SEND OPTION 4 FOR INITIALIZATION
@@ -109,13 +110,11 @@ public class AppNodeImpl implements Publisher, Consumer{
                 objectOutputStream.flush();
 
                 //SEND SOCKET ADDRESS FOR CONNECTIONS
-                //SocketAddress temp = new InetSocketAddress(InetAddress.getLocalHost(), RequestHandler.port);
                 String string_socket = serverSocket.getLocalSocketAddress().toString().split("/")[1];
                 String[] array = string_socket.split(":");
                 InetAddress hear_ip = InetAddress.getByName(array[0]);
                 int hear_port = Integer.parseInt(array[1]);
                 hear_address = new InetSocketAddress(hear_ip, hear_port);
-                System.out.println(hear_address);
                 objectOutputStream.writeObject(hear_address);
                 objectOutputStream.flush();
 
@@ -217,15 +216,13 @@ public class AppNodeImpl implements Publisher, Consumer{
     public SocketAddress hashTopic(String hashtopic) {
 
         int digest;
-
         SocketAddress brokerAddress = brokerHashes.get(brokerHashes.firstKey());
         try {
-            MessageDigest sha256 = MessageDigest.getInstance("SHA-1");
+            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
             byte[] bb = sha256.digest(hashtopic.getBytes(StandardCharsets.UTF_8));
             BigInteger bigInteger = new BigInteger(1, bb);
             digest = bigInteger.intValue();
 
-            System.out.println("My hash is: " + digest);
             //Fit to the right broker
             for (int hash : brokerHashes.keySet()) {
                 if (digest <= hash) {
@@ -423,9 +420,7 @@ public class AppNodeImpl implements Publisher, Consumer{
             Scanner in5 = new Scanner(System.in);
             System.out.println("Please give me the InetAddress: ");
             String inetAddress = in5.nextLine();
-            /**KOSTAS-START*/
             requestSocket = new Socket(InetAddress.getByName(inetAddress), 4000);
-            /**KOSTAS-START*/
             objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
             objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
         } catch (UnknownHostException unknownHost) {
@@ -622,8 +617,6 @@ public class AppNodeImpl implements Publisher, Consumer{
 
         public ServerSocket serverSocket;
         public Socket connectionSocket;
-        private static final int port = 4900;
-        private int current_threads = 1;
 
         public RequestHandler(ServerSocket serverSocket) {
             this.serverSocket = serverSocket;
@@ -634,8 +627,7 @@ public class AppNodeImpl implements Publisher, Consumer{
             try {
                 while(true) {
                     connectionSocket = serverSocket.accept();
-                    new ServeRequest(connectionSocket, current_threads).start();
-                    current_threads++;
+                    new ServeRequest(connectionSocket).start();
                 }
             } catch(IOException e) {
                 /* Crash the server if IO fails. Something bad has happened. */
@@ -653,14 +645,11 @@ public class AppNodeImpl implements Publisher, Consumer{
     class ServeRequest extends Thread {
 
         private Socket socket;
-        private int threadNumber;
         private ObjectInputStream objectInputStream;
         private ObjectOutputStream objectOutputStream;
 
-        ServeRequest(Socket s, int currentThreads) {
+        ServeRequest(Socket s) {
             socket = s;
-            threadNumber = currentThreads;
-            setName("Thread " + threadNumber);
             try {
                 objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
                 objectInputStream = new ObjectInputStream(socket.getInputStream());
@@ -819,7 +808,8 @@ public class AppNodeImpl implements Publisher, Consumer{
                             answer = "n";
                         } else {
                             System.out.println("Channels that you are subscribed: ");
-                            System.out.println(subscribedToChannels);
+                            for (String channel : subscribedToChannels)
+                                System.out.println(channel);
                             System.out.println("Do you want to unsubscribe from one of the above channels? (y/n)");
                             answer = in2.nextLine();
                         }
@@ -858,7 +848,8 @@ public class AppNodeImpl implements Publisher, Consumer{
                             answer = "n";
                         } else {
                             System.out.println("Hashtags that you are subscribed: ");
-                            System.out.println(subscribedToHashtags);
+                            for (String hashtag : subscribedToHashtags)
+                                System.out.println(hashtag);
                             System.out.println("Do you want to unsubscribe from one of the above hashtags? (y/n)");
                             answer = in2.nextLine();
                         }
@@ -927,6 +918,73 @@ public class AppNodeImpl implements Publisher, Consumer{
                 removeHashTag(video);
 
             } else if (choice.equals("6")) {
+
+//                JFileChooser chooser = new JFileChooser(){
+//                    @Override
+//                    protected JDialog createDialog(Component parent) throws HeadlessException {
+//                        JDialog jDialog = super.createDialog(parent);
+//                        jDialog.setAlwaysOnTop(true);
+//                        return jDialog;
+//                    }
+//                };
+//                FileNameExtensionFilter filter = new FileNameExtensionFilter(".mp4", "mp4");
+//                chooser.setFileFilter(filter);
+//                int returnVal = chooser.showOpenDialog(null);
+//                if (returnVal == JFileChooser.APPROVE_OPTION) {
+//                    System.out.println("You chose to upload this file: "+chooser.getSelectedFile().getAbsolutePath());
+//
+//                    ArrayList<String> associatedHashtags = new ArrayList<>();
+//
+//                    String filepath = chooser.getSelectedFile().getAbsolutePath();
+//
+//                    String videoTitle = chooser.getSelectedFile().getName().split("\\.")[0];
+//
+//                    String hashtag;
+//                    while (true) {
+//                        System.out.print("Do you want to add a hashtag to your video? (y/n) ");
+//                        String answer = in.nextLine();
+//                        if (answer.equals("n")) {
+//                            break;
+//                        }
+//
+//                        System.out.print("Please give a hashtag for the video: ");
+//                        hashtag = in.nextLine();
+//
+//                        if (!associatedHashtags.contains(hashtag)) {
+//                            associatedHashtags.add(hashtag);
+//                        }
+//                    }
+//
+//                    VideoFile video = new VideoFile(filepath, associatedHashtags, videoTitle);
+//
+//                    HashMap<String, String> notificationHashtags = channel.addVideoFile(video);
+//
+//                    boolean notExists = true;
+//                    try {
+//                        Path source = Paths.get(filepath);
+//                        Path target = Paths.get("Uploaded Videos\\" + videoTitle + ".mp4");
+//                        Files.copy(source, target);
+//                    } catch (IOException e) {
+//                        if (e instanceof FileAlreadyExistsException) {
+//                            System.out.println("There is already a video with that name. Upload cancelled...\n");
+//                        }
+//                        notExists = false;
+//                    }
+//
+//                    if (notExists) {
+//                        if (!notificationHashtags.isEmpty()) {
+//                            for (Map.Entry<String, String> item : notificationHashtags.entrySet())
+//                                notifyBrokersForHashTags(item.getKey(), item.getValue());
+//                        }
+//
+//                        ChannelKey channelKey = new ChannelKey(channel.getChannelName(), video.getVideoID());
+//                        notifyBrokersForChanges(channelKey, associatedHashtags, videoTitle, true);
+//                    } else {
+//                        channel.removeVideoFile(video);
+//                    }
+//                } else {
+//                    System.out.println("You didn't choose any file. Upload cancelled...");
+//                }
 
                 String filepath;
                 String videoTitle;

@@ -1,4 +1,3 @@
-/**KOSTAS-START*/
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -12,7 +11,6 @@ public class AddressKeeper {
 
     private static ServerSocket serverSocket;
     private static String ID;
-    private static int current_threads = 1;
     private static TreeMap<Integer, SocketAddress> brokerHashes;
 
     public void init(){
@@ -23,9 +21,8 @@ public class AddressKeeper {
 
             while(true) {
                 connectionSocket = serverSocket.accept();
-                System.out.println(connectionSocket.getRemoteSocketAddress());
-                new Handler(connectionSocket, current_threads).start();
-                current_threads++;
+                //System.out.println(connectionSocket.getRemoteSocketAddress());
+                new Handler(connectionSocket).start();
             }
         } catch(IOException e) {
             /* Crash the server if IO fails. Something bad has happened. */
@@ -55,17 +52,14 @@ public class AddressKeeper {
     class Handler extends Thread {
 
         Socket socket;
-        int threadNumber;
         ObjectInputStream objectInputStream;
         ObjectOutputStream objectOutputStream;
 
         /**
          * Construct a Handler
          */
-        Handler(Socket s, int current_thread) {
+        Handler(Socket s) {
             socket = s;
-            threadNumber = current_thread;
-            setName("Thread " + threadNumber);
             try {
                 objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
                 objectInputStream = new ObjectInputStream(socket.getInputStream());
@@ -106,4 +100,3 @@ public class AddressKeeper {
         addressKeeper.init();
     }
 }
-/**KOSTAS-END*/

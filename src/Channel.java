@@ -176,15 +176,6 @@ public class Channel {
 
     }
 
-    /** Setters */
-//    public void addHashTag(String hashtag) {
-//        hashtagsPublished.add(hashtag);
-//    }
-
-//    public void removeHashTag(String hashtag) {
-//        hashtagsPublished.remove(hashtag);
-//    }
-
     public String toString() {
 
         String channelString;
@@ -195,4 +186,13 @@ public class Channel {
         }
         return channelString;
     }
+
+    /** Setters */
+//    public void addHashTag(String hashtag) {
+//        hashtagsPublished.add(hashtag);
+//    }
+
+//    public void removeHashTag(String hashtag) {
+//        hashtagsPublished.remove(hashtag);
+//    }
 }
