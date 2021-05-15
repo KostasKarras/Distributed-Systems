@@ -418,7 +418,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
         try {
             Scanner in5 = new Scanner(System.in);
-            System.out.println("Please give me the InetAddress: ");
+            System.out.println("Give Address Keeper IP address : ");
             String inetAddress = in5.nextLine();
             requestSocket = new Socket(InetAddress.getByName(inetAddress), 4000);
             objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
