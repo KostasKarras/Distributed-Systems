@@ -1024,6 +1024,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                     if (e instanceof FileAlreadyExistsException) {
                         System.out.println("There is already a video with that name. Upload cancelled...\n");
                     }
+                    e.printStackTrace();
                     notExists = false;
                 }
 
