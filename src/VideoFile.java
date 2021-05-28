@@ -20,6 +20,7 @@ public class VideoFile {
     }
 
     public byte[] getVideoFileChunk() {
+
         String filepath = this.getFilepath();
         byte[] buffer = null;
         try {
@@ -67,7 +68,7 @@ public class VideoFile {
         this.videoID = videoID;
     }
 
-    public void setVideoName(String videoName) {
-        this.videoName = videoName;
-    }
+//    public void setVideoName(String videoName) {
+//        this.videoName = videoName;
+//    }
 }

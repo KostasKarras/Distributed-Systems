@@ -1,8 +1,7 @@
-import java.net.SocketAddress;
+import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.TreeMap;
 
 interface Node {
 
@@ -10,12 +9,12 @@ interface Node {
 
     public void initialize(int port) throws UnknownHostException;
 
-    public TreeMap<Integer, SocketAddress> getBrokerMap();//DIMITRIS
+//    public TreeMap<Integer, SocketAddress> getBrokerMap();//DIMITRIS
 
     public void connect();
 
     public void disconnect();
 
-    public void updateNodes();
+//    public void updateNodes() throws IOException;
 
 }
