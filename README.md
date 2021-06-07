@@ -33,6 +33,6 @@
 	-java -jar Distributed_systems.jar
 	- Στο πεδίο Give Address Keeper IP address δίνουμε την διεύθυνση
 	  IP που έχει εμφανιστεί στο terminal του Address Keeper.
-	- Στο πεδίο Channel Name δίνουμε το όνομα του καναλιού του
-	  συγκεκριμένου App Node.
+	- Στο πεδίο com.example.uni_tok.Channel Name δίνουμε το όνομα του καναλιού του
+	  συγκεκριμένου App com.example.uni_tok.Node.
 

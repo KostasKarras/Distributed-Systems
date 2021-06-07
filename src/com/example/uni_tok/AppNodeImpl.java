@@ -1,18 +1,13 @@
-import javax.swing.JDialog;
-import javax.swing.JFileChooser;
-import javax.swing.filechooser.FileNameExtensionFilter;
-import java.awt.Component;
-import java.awt.HeadlessException;
+package com.example.uni_tok;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.math.BigInteger;
-import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.MulticastSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -30,7 +25,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 import java.util.TreeMap;
-import java.util.concurrent.TimeUnit;
 
 public class AppNodeImpl implements Publisher, Consumer{
 
@@ -93,7 +87,7 @@ public class AppNodeImpl implements Publisher, Consumer{
             while (true) {
                 //CHANNEL NAME
                 Scanner input = new Scanner(System.in);
-                System.out.println("Channel name : ");
+                System.out.println("com.example.uni_tok.Channel name : ");
                 String name = input.nextLine();
                 channel = new Channel(name);
 
@@ -208,7 +202,7 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
 //    @Override
-//    public List<Broker> getBrokerList() {
+//    public List<com.example.uni_tok.Broker> getBrokerList() {
 //        return brokers;
 //    }
 
@@ -261,7 +255,7 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
 //    @Override
-//    public void notifyFailure(Broker broker) {
+//    public void notifyFailure(com.example.uni_tok.Broker broker) {
 //
 //    }
 
@@ -543,7 +537,7 @@ public class AppNodeImpl implements Publisher, Consumer{
         Scanner in2 = new Scanner(System.in);
 
         try {
-            System.out.print("Give the Channel Name that you want to play: ");
+            System.out.print("Give the com.example.uni_tok.Channel Name that you want to play: ");
             String channelName = in2.nextLine();
 
             System.out.print("Give the video ID that you want to play: ");
@@ -605,6 +599,10 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     public HashMap<ChannelKey, String> getChannelVideoMap() {
         return channel.getChannelVideoNames();
+    }
+
+    public static HashMap<ChannelKey, ArrayList<String>> getChannelHashtagsMap() {
+        return channel.getChannelAssociatedHashtags();
     }
 
     public HashMap<ChannelKey, String> getHashtagVideoMap(String hashtag) {
@@ -670,11 +668,19 @@ public class AppNodeImpl implements Publisher, Consumer{
                     String choice = (String) objectInputStream.readObject();
                     System.out.println(choice);
                     if (choice.equals("CHANNEL")) {
-                        HashMap<ChannelKey, String> videoList = getChannelVideoMap();
+                        ArrayList<VideoInformation> videoList = new ArrayList<>();
+                        for (ChannelKey ck : getChannelVideoMap().keySet()) {
+                            VideoInformation vi = new VideoInformation(ck, getChannelVideoMap().get(ck), getChannelHashtagsMap().get(ck));
+                            videoList.add(vi);
+                        }
                         objectOutputStream.writeObject(videoList);
                     }
                     else {
-                        HashMap<ChannelKey, String> videoList = getHashtagVideoMap(choice);
+                        ArrayList<VideoInformation> videoList = new ArrayList<>();
+                        for (ChannelKey ck : getHashtagVideoMap(choice).keySet()) {
+                            VideoInformation vi = new VideoInformation(ck, getChannelVideoMap().get(ck), getChannelHashtagsMap().get(ck));
+                            videoList.add(vi);
+                        }
                         objectOutputStream.writeObject(videoList);
                     }
 
@@ -715,11 +721,11 @@ public class AppNodeImpl implements Publisher, Consumer{
         String choice;
         do {
             System.out.println("\n===== Menu =====");
-            //Consumer Methods
+            //com.example.uni_tok.Consumer Methods
             System.out.println("1. Register User to hashtag or channel");
             System.out.println("2. Get Topic Video List");
             System.out.println("3. Unregister User from hashtag or channel");
-            //Publisher Methods
+            //com.example.uni_tok.Publisher Methods
             System.out.println("4. Add Hashtags to a Video");
             System.out.println("5. Remove Hashtags from a Video");
             System.out.println("6. Upload Video");
@@ -778,7 +784,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                 //CHOOSE SOME VIDEO OR GO BACK
                 while (wantVideo) {
                     for (Map.Entry<ChannelKey, String> item : videoList.entrySet()) {
-                        System.out.println("Channel Name : " + item.getKey().getChannelName() + "     Video ID : "
+                        System.out.println("com.example.uni_tok.Channel Name : " + item.getKey().getChannelName() + "     Video ID : "
                                 + item.getKey().getVideoID() + "    Video Name : " +item.getValue());
                     }
 
@@ -955,7 +961,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 //                        }
 //                    }
 //
-//                    VideoFile video = new VideoFile(filepath, associatedHashtags, videoTitle);
+//                    com.example.uni_tok.VideoFile video = new com.example.uni_tok.VideoFile(filepath, associatedHashtags, videoTitle);
 //
 //                    HashMap<String, String> notificationHashtags = channel.addVideoFile(video);
 //
@@ -977,7 +983,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 //                                notifyBrokersForHashTags(item.getKey(), item.getValue());
 //                        }
 //
-//                        ChannelKey channelKey = new ChannelKey(channel.getChannelName(), video.getVideoID());
+//                        com.example.uni_tok.ChannelKey channelKey = new com.example.uni_tok.ChannelKey(channel.getChannelName(), video.getVideoID());
 //                        notifyBrokersForChanges(channelKey, associatedHashtags, videoTitle, true);
 //                    } else {
 //                        channel.removeVideoFile(video);

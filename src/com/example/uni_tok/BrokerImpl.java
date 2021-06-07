@@ -1,16 +1,14 @@
+package com.example.uni_tok;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.math.BigInteger;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.MulticastSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
-import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -21,7 +19,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 import java.util.TreeMap;
-import java.util.concurrent.TimeUnit;
 
 public class BrokerImpl implements Broker{
 
@@ -58,7 +55,7 @@ public class BrokerImpl implements Broker{
     public void initialize(int port)  {
 
         try {
-            System.out.println("Broker IP : " + InetAddress.getLocalHost().getHostAddress());
+            System.out.println("com.example.uni_tok.Broker IP : " + InetAddress.getLocalHost().getHostAddress());
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
@@ -150,7 +147,7 @@ public class BrokerImpl implements Broker{
             requestSocket = new Socket(InetAddress.getByName(inetAddress), 4000);
             objectOutputStream = new ObjectOutputStream(requestSocket.getOutputStream());
             objectInputStream = new ObjectInputStream(requestSocket.getInputStream());
-            System.out.println("Broker is running...");
+            System.out.println("com.example.uni_tok.Broker is running...");
         } catch (UnknownHostException unknownHost) {
             System.err.println("You are trying to connect to an unknown host.");
         } catch (IOException e) {
@@ -190,12 +187,12 @@ public class BrokerImpl implements Broker{
     }
 
 //    @Override
-//    public Publisher acceptConnection(Publisher publisher) {
+//    public com.example.uni_tok.Publisher acceptConnection(com.example.uni_tok.Publisher publisher) {
 //        return null;
 //    }
 //
 //    @Override
-//    public Consumer acceptConnection(Consumer consumer) {
+//    public com.example.uni_tok.Consumer acceptConnection(com.example.uni_tok.Consumer consumer) {
 //        return null;
 //    }
 //
@@ -279,14 +276,14 @@ public class BrokerImpl implements Broker{
             try {
                 int option = (int) objectInputStream.readObject();
 
-                /** Node Requests Handle */
-                if (option == 0) {  // Send Broker Hashes
+                /** com.example.uni_tok.Node Requests Handle */
+                if (option == 0) {  // Send com.example.uni_tok.Broker Hashes
 
                     objectOutputStream.writeObject(brokerHashes);
                     objectOutputStream.flush();
                 }
 
-                /** Consumer - User Requests Handle */
+                /** com.example.uni_tok.Consumer - User Requests Handle */
                 else if (option == 1) {  // Register User
 
                     String channel_name = (String) objectInputStream.readObject();
@@ -342,7 +339,7 @@ public class BrokerImpl implements Broker{
 
                     String channel_or_hashtag = (String) objectInputStream.readObject();
                     String channelName = (String) objectInputStream.readObject();
-                    HashMap<ChannelKey, String> videoList = new HashMap<>();
+                    ArrayList<VideoInformation> videoList = new ArrayList<>();
 
                     if (channel_or_hashtag.charAt(0) == '#') {
                         ArrayList<SocketAddress> addresses = brokerHashtags.get(channel_or_hashtag);
@@ -356,9 +353,9 @@ public class BrokerImpl implements Broker{
 
                     /**FILTER-CONSUMERS-START*/
                     if (!videoList.isEmpty()) {
-                        for (ChannelKey channelKey : videoList.keySet()) {
-                            if (channelKey.getChannelName().equals(channelName)) {
-                                videoList.remove(channelKey);
+                        for (VideoInformation vi: videoList) {
+                            if (vi.getChannelKey().getChannelName().equals(channelName)) {
+                                videoList.remove(vi);
                             }
                         }
                     }
@@ -415,7 +412,7 @@ public class BrokerImpl implements Broker{
                     objectOutputStream.writeObject(unique);
                     objectOutputStream.flush();
 
-                    /** Publisher Requests Handle */
+                    /** com.example.uni_tok.Publisher Requests Handle */
 
                 } else if (option == 5) {  // Push?
 

@@ -1,3 +1,5 @@
+package com.example.uni_tok;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -74,7 +76,7 @@ public class AddressKeeper {
                 int option = (int) objectInputStream.readObject();
 
                 if (option == 1){
-                    //Broker
+                    //com.example.uni_tok.Broker
                     addBrokers(objectInputStream, objectOutputStream);
                 } else if (option == 2){
                     //AppNode
