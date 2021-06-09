@@ -537,7 +537,7 @@ public class AppNodeImpl implements Publisher, Consumer{
     }
 
     @Override
-    public void playData(HashMap<ChannelKey, String> videoList) {
+    public void playData(ArrayList<VideoInformation> videoList) {
 
         File nf = null;
         Scanner in2 = new Scanner(System.in);
@@ -551,7 +551,14 @@ public class AppNodeImpl implements Publisher, Consumer{
 
             ChannelKey key = new ChannelKey(channelName, videoID);
 
-            if (!videoList.containsKey(key)){
+            boolean contains = false;
+
+            for (VideoInformation item : videoList) {
+                if (item.getChannelKey().equals(key)) {
+                    contains = true;
+                }
+            }
+            if (!contains){
                 System.out.println("This combination of channel name and id doesn't exist.");
             } else {
                 //CONNECTING TO BROKER RESPONSIBLE FOR CHANNEL, THAT HAS THE VIDEO WE ASKED FOR
@@ -760,7 +767,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                 //Connect to that broker
                 connect(socketAddress);
 
-                HashMap<ChannelKey, String> videoList = new HashMap<>();
+                ArrayList<VideoInformation> videoList = new ArrayList<>();
 
                 try {
                     //Write option
@@ -776,7 +783,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                     objectOutputStream.flush();
 
                     //Read videoList
-                    videoList = (HashMap<ChannelKey, String>) objectInputStream.readObject();
+                    videoList = (ArrayList<VideoInformation>) objectInputStream.readObject();
                 } catch (IOException | ClassNotFoundException e) {
                     e.printStackTrace();
                 } finally {
@@ -790,9 +797,9 @@ public class AppNodeImpl implements Publisher, Consumer{
                 }
                 //CHOOSE SOME VIDEO OR GO BACK
                 while (wantVideo) {
-                    for (Map.Entry<ChannelKey, String> item : videoList.entrySet()) {
-                        System.out.println("com.example.uni_tok.Channel Name : " + item.getKey().getChannelName() + "     Video ID : "
-                                + item.getKey().getVideoID() + "    Video Name : " +item.getValue());
+                    for (VideoInformation item : videoList) {
+                        System.out.println("com.example.uni_tok.Channel Name : " + item.getChannelKey().getChannelName() + "     Video ID : "
+                                + item.getChannelKey().getVideoID() + "    Video Name : " +item.getTitle());
                     }
 
                     System.out.print("Do you want to see a video from these? (y/n)");
