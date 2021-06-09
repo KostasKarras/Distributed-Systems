@@ -450,20 +450,30 @@ public class BrokerImpl implements Broker{
                         String hashtag = (String) objectInputStream.readObject();
                         ChannelKey channelKey = (ChannelKey) objectInputStream.readObject();
                         String title = (String) objectInputStream.readObject();
+                        //DIMITRIS
+                        ArrayList<String> associatedHashtags = (ArrayList<String>) objectInputStream.readObject();
 
                         if (hashtagSubscriptions.get(hashtag) != null){
+                            //DIMITRIS
+                            VideoInformation vi = new VideoInformation(channelKey, title, associatedHashtags);
+                            //END
                             for (SocketAddress socketAddress : hashtagSubscriptions.get(hashtag)) {
-                                new Notifier(socketAddress, channelKey, title, hashtag).start();
+                                new Notifier(socketAddress, vi, hashtag).start();
                             }
                         }
 
                     } else if (action.equals("channel")) {
                         ChannelKey channelKey = (ChannelKey) objectInputStream.readObject();
                         String title = (String) objectInputStream.readObject();
+                        //DIMITRIS
+                        ArrayList<String> associatedHashtags = (ArrayList<String>) objectInputStream.readObject();
 
                         if (channelSubscriptions.get(channelKey.getChannelName()) != null) {
+                            //DIMITRIS
+                            VideoInformation vi = new VideoInformation(channelKey, title, associatedHashtags);
+                            //END
                             for (SocketAddress socketAddress : channelSubscriptions.get(channelKey.getChannelName())) {
-                                new Notifier(socketAddress, channelKey, title, null).start();
+                                new Notifier(socketAddress, vi, null).start();
                             }
                         }
                     }
@@ -499,6 +509,7 @@ public class BrokerImpl implements Broker{
     /**NEW HANDLER TO SEND NOTIFICATION FOR NEW VIDEOS TO SUBSCRIBED USERS*/
     class Notifier extends Thread {
 
+        VideoInformation vi;
         ChannelKey channelKey;
         String title;
         String hashtag;
@@ -506,9 +517,10 @@ public class BrokerImpl implements Broker{
         ObjectOutputStream objectOutputStream;
 
         /** Construct a Handler */
-        Notifier(SocketAddress socketAddress, ChannelKey channelKey, String title, String hashtag) {
-            this.channelKey = channelKey;
-            this.title = title;
+        Notifier(SocketAddress socketAddress, VideoInformation vi, String hashtag) {
+            this.vi = vi;
+            this.channelKey = vi.getChannelKey();
+            this.title = vi.getTitle();
             this.hashtag=hashtag;
 
             Socket connectionSocket = new Socket();
@@ -540,6 +552,9 @@ public class BrokerImpl implements Broker{
                 objectOutputStream.flush();
 
                 objectOutputStream.writeObject(notificationMessage);
+                objectOutputStream.flush();
+
+                objectOutputStream.writeObject(vi);
                 objectOutputStream.flush();
             } catch (IOException e) {
                 e.printStackTrace();

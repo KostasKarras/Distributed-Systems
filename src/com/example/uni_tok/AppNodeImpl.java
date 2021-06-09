@@ -164,7 +164,7 @@ public class AppNodeImpl implements Publisher, Consumer{
             }
 
             ChannelKey channelKey = new ChannelKey(channel.getChannelName(), video.getVideoID());
-            notifyBrokersForChanges(channelKey, hashtags, video.getVideoName(), false);
+            notifyBrokersForChanges(channelKey, hashtags, video.getVideoName(), video.getAssociatedHashtags(), false);
         }
     }
 
@@ -282,7 +282,7 @@ public class AppNodeImpl implements Publisher, Consumer{
         }
     }
 
-    public void notifyBrokersForChanges(ChannelKey channelKey, ArrayList<String> hashtags, String title, boolean action) {
+    public void notifyBrokersForChanges(ChannelKey channelKey, ArrayList<String> hashtags, String title, ArrayList<String> associatedHashtags, boolean action) {
 
         if (!hashtags.isEmpty()) {
             for (String hashtag : hashtags) {
@@ -302,6 +302,9 @@ public class AppNodeImpl implements Publisher, Consumer{
                     objectOutputStream.flush();
 
                     objectOutputStream.writeObject(title);
+                    objectOutputStream.flush();
+
+                    objectOutputStream.writeObject(associatedHashtags);
                     objectOutputStream.flush();
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -325,6 +328,9 @@ public class AppNodeImpl implements Publisher, Consumer{
                 objectOutputStream.flush();
 
                 objectOutputStream.writeObject(title);
+                objectOutputStream.flush();
+
+                objectOutputStream.writeObject(associatedHashtags);
                 objectOutputStream.flush();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -698,6 +704,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
                     String notificationMessage = (String) objectInputStream.readObject();
                     System.out.println(notificationMessage);
+                    VideoInformation vi = (VideoInformation) objectInputStream.readObject();
 
                 }
             } catch (IOException | ClassNotFoundException e) {
@@ -1041,7 +1048,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                     }
 
                     ChannelKey channelKey = new ChannelKey(channel.getChannelName(), video.getVideoID());
-                    notifyBrokersForChanges(channelKey, associatedHashtags, videoTitle, true);
+                    notifyBrokersForChanges(channelKey, associatedHashtags, videoTitle, associatedHashtags, true);
                 } else {
                     channel.removeVideoFile(video);
                 }
