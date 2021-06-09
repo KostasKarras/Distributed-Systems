@@ -1,6 +1,7 @@
 package com.example.uni_tok;
 
 import java.io.Serializable;
+import java.util.Date;
 
 /** com.example.uni_tok.Channel Key
  * This class is used to represent keys for HashMaps
@@ -13,10 +14,12 @@ public class ChannelKey implements Serializable {
 
     private final String channelName;
     private final int videoID;
+    private Date date;
 
     ChannelKey(String channelName, int videoID) {
         this.channelName = channelName;
         this.videoID = videoID;
+        this.date = null;
     }
 
     @Override
@@ -44,5 +47,13 @@ public class ChannelKey implements Serializable {
 
     public int getVideoID() {
         return videoID;
+    }
+
+    public Date getDate() {
+        return date;
+    }
+
+    public void setDate(Date date) {
+        this.date = date;
     }
 }

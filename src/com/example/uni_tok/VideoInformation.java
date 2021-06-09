@@ -2,16 +2,20 @@ package com.example.uni_tok;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Date;
 
-public class VideoInformation implements Serializable {
+public class VideoInformation implements Serializable, Comparable<VideoInformation> {
     private ChannelKey ck;
     private String videoTitle;
     private ArrayList<String> associatedHashtags;
+    private Date date;
 
     public VideoInformation(ChannelKey ck, String videoTitle, ArrayList associatedHashtags) {
         this.ck = ck;
         this.videoTitle = videoTitle;
         this.associatedHashtags = associatedHashtags;
+        date = ck.getDate();
+        //Log.d("DATE", date.toString());
     }
 
     public ChannelKey getChannelKey() {
@@ -32,5 +36,13 @@ public class VideoInformation implements Serializable {
 
     public ArrayList<String> getHashtags(){
         return associatedHashtags;
+    }
+
+    public Date getDate() {
+        return date;
+    }
+
+    public int compareTo(VideoInformation vi) {
+        return this.getDate().compareTo(vi.getDate()) * (-1);
     }
 }
