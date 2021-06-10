@@ -1,5 +1,7 @@
 package com.example.uni_tok;
 
+import jdk.swing.interop.SwingInterOpUtils;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -42,11 +44,12 @@ public class Channel {
 
     }
 
-    public HashMap<String, String> addVideoFile(VideoFile video) {
+    public HashMap<String, String> addVideoFile(VideoFile video, ChannelKey channelKey) {
         video.setVideoID(counterVideoID);
         ID_VideoFileMap.put(counterVideoID, video);
-        ID_VideoNameMap.put(new ChannelKey(this.channelName, counterVideoID), video.getVideoName());
-        ID_AssociatedHashtagsMap.put(new ChannelKey(this.channelName, counterVideoID), video.getAssociatedHashtags());
+        ID_VideoNameMap.put(channelKey, video.getVideoName());
+        System.out.println(ID_VideoNameMap);
+        ID_AssociatedHashtagsMap.put(channelKey, video.getAssociatedHashtags());
         counterVideoID++;
 
         HashMap<String, String> hashtagsNeedNotification = new HashMap<>();
@@ -70,6 +73,7 @@ public class Channel {
     }
 
     public HashMap<String, String> removeVideoFile(VideoFile video) {
+        System.out.println("IN REMOVE");
         ID_VideoFileMap.remove(video.getVideoID());
         ID_VideoNameMap.remove(new ChannelKey(this.channelName, video.getVideoID()));
         ID_AssociatedHashtagsMap.remove(new ChannelKey(this.channelName, video.getVideoID()));
@@ -186,6 +190,8 @@ public class Channel {
         return hashtagVideosHashmap;
 
     }
+
+    public int getCounterVideoID() { return this.counterVideoID;}
 
     public String toString() {
 

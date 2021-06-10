@@ -13,7 +13,7 @@ import java.util.Date;
 public class ChannelKey implements Serializable {
 
     private final String channelName;
-    private final int videoID;
+    private int videoID;
     private Date date;
 
     ChannelKey(String channelName, int videoID) {
@@ -49,11 +49,14 @@ public class ChannelKey implements Serializable {
         return videoID;
     }
 
+    public void setVideoID(int id) {videoID = id;}
+
     public Date getDate() {
         return date;
     }
 
-    public void setDate(Date date) {
+    public ChannelKey setDate(Date date) {
         this.date = date;
+        return this;
     }
 }

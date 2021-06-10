@@ -70,6 +70,7 @@ public class BrokerImpl implements Broker{
 
         try {
             serverSocket = new ServerSocket(port, 60, InetAddress.getLocalHost());
+            System.out.println(InetAddress.getLocalHost());
 
 //            multicastIP = InetAddress.getByName("228.0.0.0");
 //            multicastPort = 5000;

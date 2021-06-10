@@ -1033,8 +1033,12 @@ public class AppNodeImpl implements Publisher, Consumer{
                 }
 
                 VideoFile video = new VideoFile(filepath, associatedHashtags, videoTitle);
+                ChannelKey channelKey = new ChannelKey(channel.getChannelName(), channel.getCounterVideoID()).setDate(video.getDate());
 
-                HashMap<String, String> notificationHashtags = channel.addVideoFile(video);
+                System.out.println(channelKey.toString() + "\nDate : " + channelKey.getDate().toString());
+
+                HashMap<String, String> notificationHashtags = channel.addVideoFile(video, channelKey);
+
                 boolean notExists = true;
                 try {
                     Path source = Paths.get(filepath);
@@ -1054,7 +1058,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                             notifyBrokersForHashTags(item.getKey(), item.getValue());
                     }
 
-                    ChannelKey channelKey = new ChannelKey(channel.getChannelName(), video.getVideoID());
+
                     notifyBrokersForChanges(channelKey, associatedHashtags, videoTitle, associatedHashtags, true);
                 } else {
                     channel.removeVideoFile(video);

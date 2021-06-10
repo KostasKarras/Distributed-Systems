@@ -56,9 +56,10 @@ public class PullOperation {
 
         try {
 
+            System.out.println(publisherAddress.toString());
             //Make connection with client
             pullSocket = new Socket();
-            pullSocket.connect(publisherAddress);
+            pullSocket.connect(publisherAddress, 3000);
             objectInputStream = new ObjectInputStream(pullSocket.getInputStream());
             objectOutputStream = new ObjectOutputStream(pullSocket.getOutputStream());
 
