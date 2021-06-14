@@ -60,8 +60,8 @@ public class PullOperation {
             //Make connection with client
             pullSocket = new Socket();
             pullSocket.connect(publisherAddress, 3000);
-            objectInputStream = new ObjectInputStream(pullSocket.getInputStream());
             objectOutputStream = new ObjectOutputStream(pullSocket.getOutputStream());
+            objectInputStream = new ObjectInputStream(pullSocket.getInputStream());
 
             //Give option code
             objectOutputStream.writeObject(1);

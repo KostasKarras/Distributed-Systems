@@ -48,7 +48,7 @@ public class AppNodeImpl implements Publisher, Consumer{
 
     public static void main(String[] args) {
 
-        new AppNodeImpl().initialize(4960);
+        new AppNodeImpl().initialize(4961);
     }
 
     @Override
@@ -163,7 +163,7 @@ public class AppNodeImpl implements Publisher, Consumer{
                     notifyBrokersForHashTags(item.getKey(), item.getValue());
             }
 
-            ChannelKey channelKey = new ChannelKey(channel.getChannelName(), video.getVideoID());
+            ChannelKey channelKey = new ChannelKey(channel.getChannelName(), video.getVideoID()).setDate(video.getDate());
             notifyBrokersForChanges(channelKey, hashtags, video.getVideoName(), video.getAssociatedHashtags(), false);
         }
     }

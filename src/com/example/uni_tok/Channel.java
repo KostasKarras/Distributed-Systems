@@ -184,7 +184,7 @@ public class Channel {
 
         //Get hashmap needed
         for (VideoFile video : hashtag_files) {
-            hashtagVideosHashmap.put(new ChannelKey(channelName, video.getVideoID()), video.getVideoName());
+            hashtagVideosHashmap.put(new ChannelKey(channelName, video.getVideoID()).setDate(video.getDate()), video.getVideoName());
         }
 
         return hashtagVideosHashmap;
