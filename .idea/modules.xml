@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/Back_end_UniTok.iml" filepath="$PROJECT_DIR$/Back_end_UniTok.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Distributed_systems.iml" filepath="$PROJECT_DIR$/Distributed_systems.iml" />
     </modules>
   </component>
 </project>
