@@ -1,3 +1,5 @@
+package com.example.uni_tok;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -12,7 +14,7 @@ import java.util.stream.IntStream;
 
 public class PullOperation {
 
-    private HashMap<ChannelKey, String> hashtagVideoList;
+    private ArrayList<VideoInformation> hashtagVideoList;
     private CountDownLatch latch;
 
     PullOperation() {
@@ -20,9 +22,9 @@ public class PullOperation {
         latch = null;
     }
 
-    public HashMap<ChannelKey, String> pullHashtags(String channel_or_hashtag, ArrayList<SocketAddress> addresses) {
+    public ArrayList<VideoInformation> pullHashtags(String channel_or_hashtag, ArrayList<SocketAddress> addresses) {
 
-        hashtagVideoList = new HashMap<>();
+        hashtagVideoList = new ArrayList<>();
 
         //Check if this is channel name or hashtag
         try {
@@ -45,18 +47,19 @@ public class PullOperation {
 
     }
 
-    public HashMap<ChannelKey, String> pullChannel(SocketAddress publisherAddress) {
+    public ArrayList<VideoInformation> pullChannel(SocketAddress publisherAddress) {
 
         Socket pullSocket;
         ObjectOutputStream objectOutputStream;
         ObjectInputStream objectInputStream;
-        HashMap<ChannelKey, String> channelVideoList = null;
+        ArrayList<VideoInformation> channelVideoList = null;
 
         try {
 
+            System.out.println(publisherAddress.toString());
             //Make connection with client
             pullSocket = new Socket();
-            pullSocket.connect(publisherAddress);
+            pullSocket.connect(publisherAddress, 3000);
             objectInputStream = new ObjectInputStream(pullSocket.getInputStream());
             objectOutputStream = new ObjectOutputStream(pullSocket.getOutputStream());
 
@@ -69,7 +72,7 @@ public class PullOperation {
             objectOutputStream.flush();
 
             //Store channel videos
-            channelVideoList = (HashMap<ChannelKey, String>) objectInputStream.readObject();
+            channelVideoList = (ArrayList<VideoInformation>) objectInputStream.readObject();
 
             //Close connections
             objectInputStream.close();
@@ -128,8 +131,8 @@ public class PullOperation {
     }
 
     /** Thread-safe update of hashtag video list. */
-    public synchronized void updateHashtagVideoList(HashMap<ChannelKey, String> list) {
-        hashtagVideoList.putAll(list);
+    public synchronized void updateHashtagVideoList(ArrayList<VideoInformation> list) {
+        hashtagVideoList.addAll(list);
     }
 
 
@@ -170,7 +173,7 @@ public class PullOperation {
                 objectOutputStream.flush();
 
                 //Receive video List
-                HashMap<ChannelKey, String> channelVideoList = (HashMap<ChannelKey, String>) objectInputStream.readObject();
+                ArrayList<VideoInformation> channelVideoList = (ArrayList<VideoInformation>) objectInputStream.readObject();
 
                 //Concatenate with larger list
                 //PROBLEM : LOCAL VARIABLES ARE THREAD SAFE, SO I CANNOT ACCESS THEM INSIDE THREAD

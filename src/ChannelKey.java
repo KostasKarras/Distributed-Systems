@@ -1,20 +1,25 @@
-import java.io.Serializable;
+package com.example.uni_tok;
 
-/** Channel Key
+import java.io.Serializable;
+import java.util.Date;
+
+/** com.example.uni_tok.Channel Key
  * This class is used to represent keys for HashMaps
  * with two values : channel Name and id.
- * Broker needs to know which channel name sent which videos
+ * com.example.uni_tok.Broker needs to know which channel name sent which videos
  * and that would be impossible using only video id as a key
  * to our Hashmap
  * */
 public class ChannelKey implements Serializable {
 
     private final String channelName;
-    private final int videoID;
+    private int videoID;
+    private Date date;
 
     ChannelKey(String channelName, int videoID) {
         this.channelName = channelName;
         this.videoID = videoID;
+        this.date = null;
     }
 
     @Override
@@ -33,7 +38,7 @@ public class ChannelKey implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("Channel Name : %s, Video Id : %d", channelName, videoID);
+        return String.format("com.example.uni_tok.Channel Name : %s, Video Id : %d", channelName, videoID);
     }
 
     public String getChannelName() {
@@ -42,5 +47,16 @@ public class ChannelKey implements Serializable {
 
     public int getVideoID() {
         return videoID;
+    }
+
+    public void setVideoID(int id) {videoID = id;}
+
+    public Date getDate() {
+        return date;
+    }
+
+    public ChannelKey setDate(Date date) {
+        this.date = date;
+        return this;
     }
 }

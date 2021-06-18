@@ -1,3 +1,5 @@
+package com.example.uni_tok;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -17,7 +19,7 @@ public class AddressKeeper {
         Socket connectionSocket = null;
         try {
             serverSocket = new ServerSocket(4000, 60, InetAddress.getLocalHost());
-            System.out.println(InetAddress.getLocalHost());
+            System.out.println("Address Keeper IP : " + InetAddress.getLocalHost().getHostAddress());
 
             while(true) {
                 connectionSocket = serverSocket.accept();
@@ -74,7 +76,7 @@ public class AddressKeeper {
                 int option = (int) objectInputStream.readObject();
 
                 if (option == 1){
-                    //Broker
+                    //com.example.uni_tok.Broker
                     addBrokers(objectInputStream, objectOutputStream);
                 } else if (option == 2){
                     //AppNode

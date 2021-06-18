@@ -1,7 +1,10 @@
+package com.example.uni_tok;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 
 public class VideoFile {
 
@@ -10,13 +13,17 @@ public class VideoFile {
     private ArrayList<String> associatedHashtags;
     private int videoID;
     private String videoName;
+    private Date date;
+    private byte [] thumbnail;
 
 
     /** Constructor */
-    public VideoFile (String filepath, ArrayList<String> associatedHashtags, String videoName) {
+    public VideoFile (String filepath, ArrayList<String> associatedHashtags, String videoName, byte [] thumbnail) {
         this.filepath = filepath;
         this.associatedHashtags = associatedHashtags;
         this.videoName = videoName;
+        this.thumbnail = thumbnail;
+        date = new Date();
     }
 
     public byte[] getVideoFileChunk() {
@@ -54,6 +61,8 @@ public class VideoFile {
         return this.videoName;
     }
 
+    public Date getDate() {return this.date;}
+
 
     /** Setters */
     public void addHashtag(String hashtag) {
@@ -66,6 +75,10 @@ public class VideoFile {
 
     public void setVideoID(int videoID) {
         this.videoID = videoID;
+    }
+
+    public byte [] getThumbnail(){
+        return this.thumbnail;
     }
 
 //    public void setVideoName(String videoName) {

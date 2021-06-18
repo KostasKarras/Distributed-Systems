@@ -1,3 +1,5 @@
+package com.example.uni_tok;
+
 import java.util.HashMap;
 import java.util.List;
 
@@ -8,9 +10,9 @@ interface Broker extends Node {
 
     public int calculateKeys(String id);
 
-//    public Publisher acceptConnection(Publisher publisher);
+//    public com.example.uni_tok.Publisher acceptConnection(com.example.uni_tok.Publisher publisher);
 //
-//    public Consumer acceptConnection(Consumer consumer);
+//    public com.example.uni_tok.Consumer acceptConnection(com.example.uni_tok.Consumer consumer);
 //
 //    public void notifyPublisher(String str);
 

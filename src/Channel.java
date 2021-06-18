@@ -1,3 +1,7 @@
+package com.example.uni_tok;
+
+import jdk.swing.interop.SwingInterOpUtils;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -11,6 +15,8 @@ public class Channel {
     private HashMap<Integer, VideoFile> ID_VideoFileMap;
     private HashMap<ChannelKey, String> ID_VideoNameMap;
 
+    private HashMap<ChannelKey, ArrayList<String>> ID_AssociatedHashtagsMap;
+
     /** Constructors */
 
     //For new users
@@ -21,6 +27,7 @@ public class Channel {
         counterVideoID = 0;
         ID_VideoFileMap = new HashMap<>();
         ID_VideoNameMap = new HashMap<>();
+        ID_AssociatedHashtagsMap = new HashMap<>();
 
     }
 
@@ -37,10 +44,12 @@ public class Channel {
 
     }
 
-    public HashMap<String, String> addVideoFile(VideoFile video) {
+    public HashMap<String, String> addVideoFile(VideoFile video, ChannelKey channelKey) {
         video.setVideoID(counterVideoID);
         ID_VideoFileMap.put(counterVideoID, video);
-        ID_VideoNameMap.put(new ChannelKey(this.channelName, counterVideoID), video.getVideoName());
+        ID_VideoNameMap.put(channelKey, video.getVideoName());
+        System.out.println(ID_VideoNameMap);
+        ID_AssociatedHashtagsMap.put(channelKey, video.getAssociatedHashtags());
         counterVideoID++;
 
         HashMap<String, String> hashtagsNeedNotification = new HashMap<>();
@@ -64,8 +73,10 @@ public class Channel {
     }
 
     public HashMap<String, String> removeVideoFile(VideoFile video) {
+        System.out.println("IN REMOVE");
         ID_VideoFileMap.remove(video.getVideoID());
         ID_VideoNameMap.remove(new ChannelKey(this.channelName, video.getVideoID()));
+        ID_AssociatedHashtagsMap.remove(new ChannelKey(this.channelName, video.getVideoID()));
 
         HashMap<String, String> hashtagsNeedNotification = new HashMap<>();
         ArrayList<String> hashtags = video.getAssociatedHashtags();
@@ -154,6 +165,10 @@ public class Channel {
         return ID_VideoNameMap;
     }
 
+    public HashMap<ChannelKey, ArrayList<String>> getChannelAssociatedHashtags() {
+        return ID_AssociatedHashtagsMap;
+    }
+
     public String getChannelName(){
         return this.channelName;
     }
@@ -169,12 +184,14 @@ public class Channel {
 
         //Get hashmap needed
         for (VideoFile video : hashtag_files) {
-            hashtagVideosHashmap.put(new ChannelKey(channelName, video.getVideoID()), video.getVideoName());
+            hashtagVideosHashmap.put(new ChannelKey(channelName, video.getVideoID()).setDate(video.getDate()), video.getVideoName());
         }
 
         return hashtagVideosHashmap;
 
     }
+
+    public int getCounterVideoID() { return this.counterVideoID;}
 
     public String toString() {
 

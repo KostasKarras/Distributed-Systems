@@ -1,3 +1,5 @@
+package com.example.uni_tok;
+
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.SocketAddress;
@@ -11,13 +13,13 @@ interface Publisher extends Node{
 
     public void removeHashTag(VideoFile video);
 
-//    public List<Broker> getBrokerList();
+//    public List<com.example.uni_tok.Broker> getBrokerList();
 
     public SocketAddress hashTopic(String hashtopic);
 
     public void push(int id, ObjectInputStream objectInputStream, ObjectOutputStream objectOutputStream);
 
-//    public void notifyFailure(Broker broker); MALLON THA FYGEI
+//    public void notifyFailure(com.example.uni_tok.Broker broker); MALLON THA FYGEI
 
     public void notifyBrokersForHashTags(String hashtag, String action);
 
