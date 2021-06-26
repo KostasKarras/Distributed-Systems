@@ -363,6 +363,7 @@ public class BrokerImpl implements Broker{
                     /**FILTER-CONSUMERS-END*/
 
                     objectOutputStream.writeObject(videoList);
+                    objectOutputStream.flush();
 
 
                 } else if (option == 3) {// Play Data
