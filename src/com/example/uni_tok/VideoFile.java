@@ -80,8 +80,4 @@ public class VideoFile {
     public byte [] getThumbnail(){
         return this.thumbnail;
     }
-
-//    public void setVideoName(String videoName) {
-//        this.videoName = videoName;
-//    }
 }
