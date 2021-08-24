@@ -6,7 +6,6 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -59,9 +58,9 @@ public class PullOperation {
             System.out.println(publisherAddress.toString());
             //Make connection with client
             pullSocket = new Socket();
-            pullSocket.connect(publisherAddress, 3000);
-            objectInputStream = new ObjectInputStream(pullSocket.getInputStream());
+            pullSocket.connect(publisherAddress);
             objectOutputStream = new ObjectOutputStream(pullSocket.getOutputStream());
+            objectInputStream = new ObjectInputStream(pullSocket.getInputStream());
 
             //Give option code
             objectOutputStream.writeObject(1);
