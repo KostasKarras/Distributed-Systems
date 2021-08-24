@@ -31,7 +31,9 @@ public class VideoInformation implements Serializable, Comparable<VideoInformati
         return ck.getChannelName();
     }
 
-    public String getTitle(){ return videoTitle; }
+    public String getTitle(){
+        return videoTitle;
+    }
 
     public ArrayList<String> getHashtags(){
         return associatedHashtags;
@@ -41,9 +43,9 @@ public class VideoInformation implements Serializable, Comparable<VideoInformati
         return date;
     }
 
-    public byte[] getThumbnail() { return this.thumbnail; }
-
-    public int compareTo(VideoInformation vi) {
-        return this.getDate().compareTo(vi.getDate()) * (-1);
+    public byte [] getThumbnail(){
+        return this.thumbnail;
     }
+
+    public int compareTo(VideoInformation vi) { return this.getDate().compareTo(vi.getDate()) * (-1); }
 }
