@@ -12,7 +12,6 @@ import java.util.TreeMap;
 public class AddressKeeper {
 
     private static ServerSocket serverSocket;
-    private static String ID;
     private static TreeMap<Integer, SocketAddress> brokerHashes;
 
     public void init(){
@@ -23,7 +22,6 @@ public class AddressKeeper {
 
             while(true) {
                 connectionSocket = serverSocket.accept();
-                //System.out.println(connectionSocket.getRemoteSocketAddress());
                 new Handler(connectionSocket).start();
             }
         } catch(IOException e) {
@@ -64,6 +62,7 @@ public class AddressKeeper {
             socket = s;
             try {
                 objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
+                objectOutputStream.flush();
                 objectInputStream = new ObjectInputStream(socket.getInputStream());
             } catch (IOException e) {
                 e.printStackTrace();
@@ -96,7 +95,7 @@ public class AddressKeeper {
         }
     }
 
-    public static void main(String[]  args) {
+    public static void main(String[] args) {
         AddressKeeper addressKeeper = new AddressKeeper();
         brokerHashes = new TreeMap<>();
         addressKeeper.init();
