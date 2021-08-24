@@ -47,7 +47,7 @@ public class BrokerImpl implements Broker{
 
     public static void main(String[] args) {
 
-        new BrokerImpl().initialize(4421);
+        new BrokerImpl().initialize(4221);
     }
 
 
@@ -360,8 +360,8 @@ public class BrokerImpl implements Broker{
                         }
                     }
                     /**FILTER-CONSUMERS-END*/
-
                     objectOutputStream.writeObject(videoList);
+                    objectOutputStream.flush();
 
 
                 } else if (option == 3) {// Play Data
@@ -450,9 +450,9 @@ public class BrokerImpl implements Broker{
                         String hashtag = (String) objectInputStream.readObject();
                         ChannelKey channelKey = (ChannelKey) objectInputStream.readObject();
                         String title = (String) objectInputStream.readObject();
+                        ArrayList<String> associatedHashtags = (ArrayList<String>) objectInputStream.readObject();
                         byte[] thumbnail = objectInputStream.readAllBytes();
                         //DIMITRIS
-                        ArrayList<String> associatedHashtags = (ArrayList<String>) objectInputStream.readObject();
 
                         if (hashtagSubscriptions.get(hashtag) != null){
                             //DIMITRIS
@@ -466,9 +466,9 @@ public class BrokerImpl implements Broker{
                     } else if (action.equals("channel")) {
                         ChannelKey channelKey = (ChannelKey) objectInputStream.readObject();
                         String title = (String) objectInputStream.readObject();
+                        ArrayList<String> associatedHashtags = (ArrayList<String>) objectInputStream.readObject();
                         byte[] thumbnail = objectInputStream.readAllBytes();
                         //DIMITRIS
-                        ArrayList<String> associatedHashtags = (ArrayList<String>) objectInputStream.readObject();
 
                         if (channelSubscriptions.get(channelKey.getChannelName()) != null) {
                             //DIMITRIS
