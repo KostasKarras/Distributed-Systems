@@ -75,7 +75,7 @@ public class AddressKeeper {
                 int option = (int) objectInputStream.readObject();
 
                 if (option == 1){
-                    //com.example.uni_tok.Broker
+                    //Broker
                     addBrokers(objectInputStream, objectOutputStream);
                 } else if (option == 2){
                     //AppNode
