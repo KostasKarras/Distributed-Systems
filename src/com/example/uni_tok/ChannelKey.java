@@ -48,9 +48,7 @@ public class ChannelKey implements Serializable {
     public int getVideoID() {
         return videoID;
     }
-
-    public void setVideoID(int id) {videoID = id;}
-
+    
     public Date getDate() {
         return date;
     }
