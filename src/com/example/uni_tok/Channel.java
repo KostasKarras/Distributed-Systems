@@ -9,10 +9,9 @@ public class Channel {
     private String channelName;
     private ArrayList<String> hashtagsPublished;
     private HashMap<String, ArrayList<VideoFile>> hashtagVideoFilesMap;
-    private int counterVideoID;
-    private HashMap<Integer, VideoFile> ID_VideoFileMap;
+    private static int counterVideoID;
+    private static HashMap<Integer, VideoFile> ID_VideoFileMap;
     private HashMap<ChannelKey, String> ID_VideoNameMap;
-
     private HashMap<ChannelKey, ArrayList<String>> ID_AssociatedHashtagsMap;
 
     /** Constructors */
@@ -46,7 +45,6 @@ public class Channel {
         video.setVideoID(counterVideoID);
         ID_VideoFileMap.put(counterVideoID, video);
         ID_VideoNameMap.put(channelKey, video.getVideoName());
-        System.out.println(ID_VideoNameMap);
         ID_AssociatedHashtagsMap.put(channelKey, video.getAssociatedHashtags());
         counterVideoID++;
 
@@ -71,7 +69,6 @@ public class Channel {
     }
 
     public HashMap<String, String> removeVideoFile(VideoFile video) {
-        System.out.println("IN REMOVE");
         ID_VideoFileMap.remove(video.getVideoID());
         ID_VideoNameMap.remove(new ChannelKey(this.channelName, video.getVideoID()));
         ID_AssociatedHashtagsMap.remove(new ChannelKey(this.channelName, video.getVideoID()));
@@ -177,14 +174,14 @@ public class Channel {
 
         //Get hashmap needed
         for (VideoFile video : hashtag_files) {
-            hashtagVideosHashmap.put(new ChannelKey(channelName, video.getVideoID()).setDate(video.getDate()), video.getVideoName());
+            hashtagVideosHashmap.put(new ChannelKey(channelName, video.getVideoID()), video.getVideoName());
         }
 
         return hashtagVideosHashmap;
 
     }
 
-    public int getCounterVideoID() { return this.counterVideoID;}
+    public int getCounterVideoID() {return counterVideoID;}
 
     public String toString() {
 
@@ -195,5 +192,18 @@ public class Channel {
             channelString += String.valueOf(id) + ": " + getVideoFile_byID(id).getVideoName() + "\r\n";
         }
         return channelString;
+    }
+
+    public static ArrayList<VideoFile> getVideos(){
+        ArrayList<VideoFile> temp = new ArrayList<>();
+        if (ID_VideoFileMap != null) {
+            for (Map.Entry<Integer, VideoFile> video : ID_VideoFileMap.entrySet())
+                temp.add(video.getValue());
+        }
+        return temp;
+    }
+
+    public static int getVideoID(){
+        return counterVideoID;
     }
 }
