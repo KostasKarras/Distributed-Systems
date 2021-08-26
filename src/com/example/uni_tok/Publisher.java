@@ -4,6 +4,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.SocketAddress;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 interface Publisher extends Node{
 
@@ -17,5 +18,15 @@ interface Publisher extends Node{
 
     public void notifyBrokersForHashTags(String hashtag, String action);
 
+    public void notifyBrokersForChanges(ChannelKey channelKey, ArrayList<String> hashtags, String title,
+                                        ArrayList<String> associatedHashtags, boolean action);
+
     public ArrayList<byte[]> generateChunks(VideoFile video);
+
+    public HashMap<ChannelKey, String> getChannelVideoMap();
+
+    public HashMap<ChannelKey, ArrayList<String>> getChannelHashtagsMap();
+
+    public HashMap<ChannelKey, String> getHashtagVideoMap(String hashtag);
+
 }
