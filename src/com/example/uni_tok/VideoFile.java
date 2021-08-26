@@ -16,7 +16,6 @@ public class VideoFile {
     private Date date;
     private byte [] thumbnail;
 
-
     /** Constructor */
     public VideoFile (String filepath, ArrayList<String> associatedHashtags, String videoName, byte [] thumbnail) {
         this.filepath = filepath;
@@ -61,8 +60,13 @@ public class VideoFile {
         return this.videoName;
     }
 
-    public Date getDate() {return this.date;}
+    public byte [] getThumbnail(){
+        return this.thumbnail;
+    }
 
+    public Date getDate() {
+        return this.date;
+    }
 
     /** Setters */
     public void addHashtag(String hashtag) {
@@ -75,9 +79,5 @@ public class VideoFile {
 
     public void setVideoID(int videoID) {
         this.videoID = videoID;
-    }
-
-    public byte [] getThumbnail(){
-        return this.thumbnail;
     }
 }
