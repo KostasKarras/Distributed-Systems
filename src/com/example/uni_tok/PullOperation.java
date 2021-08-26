@@ -86,8 +86,6 @@ public class PullOperation {
     public ArrayList<byte[]> pullVideo(ChannelKey channelKey, SocketAddress publisherAddress){
 
         ArrayList<byte[]> chunks = new ArrayList<>();
-        String channel = channelKey.getChannelName();
-        int videoID = channelKey.getVideoID();
 
         Socket pullSocket;
         ObjectInputStream objectInputStream;
