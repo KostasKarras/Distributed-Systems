@@ -17,7 +17,15 @@ public class AddressKeeper {
     public void init(){
         Socket connectionSocket = null;
         try {
-            serverSocket = new ServerSocket(4000, 60, InetAddress.getLocalHost());
+            serverSocket = new ServerSocket(4000, 60, InetAddress.getByName("0.0.0.0"));
+
+            /**IMPORTANT
+             * If I want to run the app from emulator
+             * I must uncomment the line 27 and
+             * comment the line 20 */
+
+//            serverSocket = new ServerSocket(4000, 60, InetAddress.getLocalHost());
+
             System.out.println("Address Keeper IP : " + InetAddress.getLocalHost().getHostAddress());
 
             while(true) {
