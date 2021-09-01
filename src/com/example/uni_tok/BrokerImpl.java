@@ -62,7 +62,14 @@ public class BrokerImpl implements Broker{
         Socket connectionSocket = null;
 
         try {
-            serverSocket = new ServerSocket(port, 60, InetAddress.getLocalHost());
+            serverSocket = new ServerSocket(port, 60, InetAddress.getByName("0.0.0.0"));
+
+            /**IMPORTANT
+             * If I want to run the app from emulator
+             * I must uncomment the line 72 and
+             * comment the line 65 */
+
+//            serverSocket = new ServerSocket(port, 60, InetAddress.getLocalHost());
 
             //CALCULATE BROKERHASH
             String serverSocketAddress = serverSocket.getLocalSocketAddress().toString();
@@ -76,11 +83,19 @@ public class BrokerImpl implements Broker{
             objectOutputStream.writeObject(1);
             objectOutputStream.flush();
 
-            String string_socket = serverSocket.getLocalSocketAddress().toString().split("/")[1];
-            String[] array = string_socket.split(":");
-            InetAddress hear_ip = InetAddress.getByName(array[0]);
-            int hear_port = Integer.parseInt(array[1]);
-            SocketAddress hear_address = new InetSocketAddress(hear_ip, hear_port);
+            SocketAddress hear_address = new InetSocketAddress(InetAddress.getByName("192.168.2.3"), port);
+
+            /**IMPORTANT
+             * If I want to run the app from emulator
+             * I must uncomment the lines 93-97 and
+             * comment the line 86 */
+
+//            String string_socket = serverSocket.getLocalSocketAddress().toString().split("/")[1];
+//            String[] array = string_socket.split(":");
+//            InetAddress hear_ip = InetAddress.getByName(array[0]);
+//            int hear_port = Integer.parseInt(array[1]);
+//            SocketAddress hear_address = new InetSocketAddress(hear_ip, hear_port);
+
 
             objectOutputStream.writeObject(hear_address);
             objectOutputStream.flush();
