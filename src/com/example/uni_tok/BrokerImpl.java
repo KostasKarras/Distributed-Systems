@@ -47,12 +47,6 @@ public class BrokerImpl implements Broker{
     @Override
     public void initialize(int port)  {
 
-        try {
-            System.out.println("Broker IP : " + InetAddress.getLocalHost().getHostAddress());
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        }
-
         brokerHashtags = new HashMap<>();
         brokerChannelNames = new HashMap<>();
         brokerHashes = new TreeMap<>();
@@ -62,12 +56,18 @@ public class BrokerImpl implements Broker{
         Socket connectionSocket = null;
 
         try {
-            serverSocket = new ServerSocket(port, 60, InetAddress.getByName("0.0.0.0"));
+            //I USE THIS SOCKET TO GET THE IP
+            Socket socket = new Socket(InetAddress.getByName("google.com"), 80);
+            String ip = socket.getLocalAddress().toString();
+            socket.close();
+            //TO REMOVE THE SLASH SYMBOL FROM THE IP ADDRESS I USE THE METHOD substring(1)
+            System.out.println("Broker IP : " + ip.substring(1));
+            serverSocket = new ServerSocket(port, 60, InetAddress.getByName(ip.substring(1)));
 
             /**IMPORTANT
              * If I want to run the app from emulator
              * I must uncomment the line 72 and
-             * comment the line 65 */
+             * comment the lines 60-62 and 64-65 */
 
 //            serverSocket = new ServerSocket(port, 60, InetAddress.getLocalHost());
 
@@ -83,12 +83,12 @@ public class BrokerImpl implements Broker{
             objectOutputStream.writeObject(1);
             objectOutputStream.flush();
 
-            SocketAddress hear_address = new InetSocketAddress(InetAddress.getByName("192.168.2.3"), port);
+            SocketAddress hear_address = new InetSocketAddress(InetAddress.getByName(ip.substring(1)), port);
 
             /**IMPORTANT
              * If I want to run the app from emulator
-             * I must uncomment the lines 93-97 and
-             * comment the line 86 */
+             * I must uncomment the lines 92-96 and
+             * comment the line 85 */
 
 //            String string_socket = serverSocket.getLocalSocketAddress().toString().split("/")[1];
 //            String[] array = string_socket.split(":");
